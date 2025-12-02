@@ -37,3 +37,4 @@ go run . example-data.txt passes
 3. The AI struggled to refactor the code into smaller functions, often creating functions that were too large or not well-defined. It did finally manage to break the code down into smaller functions after several iterations.
 4. I ran the solution against part 1 and it produced the correct results.
 5. For part 2, it understood the new requirement but initially failed to implement the logic to count passes through 0 correctly. After prompting and several iterations, it adjusted the logic and produced a working solution.
+6. I ran the solution against part 2 and it produced the wrong results, it was too low.
