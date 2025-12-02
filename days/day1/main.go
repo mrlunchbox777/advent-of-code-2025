@@ -6,8 +6,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 )
 
 func main() {
@@ -22,52 +20,20 @@ func main() {
 	}
 	defer f.Close()
 
+	// Read all lines into a slice and process using the testable function.
+	var lines []string
 	scanner := bufio.NewScanner(f)
-	dial := 50
-	zeroCount := 0
-	lineNum := 0
-
 	for scanner.Scan() {
-		lineNum++
-		raw := strings.TrimSpace(scanner.Text())
-		if raw == "" {
-			continue
-		}
-		// normalize (remove spaces and make upper-case) so both "L68" and "L 68" work
-		entry := strings.ToUpper(strings.ReplaceAll(raw, " ", ""))
-		if len(entry) < 2 {
-			fmt.Fprintf(os.Stderr, "invalid entry at line %d: %q\n", lineNum, raw)
-			continue
-		}
-		dir := entry[0]
-		numStr := entry[1:]
-		n, err := strconv.Atoi(numStr)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "invalid number at line %d: %q\n", lineNum, numStr)
-			continue
-		}
-
-		start := dial
-		shift := n % 100
-		if dir == 'L' {
-			// subtract with wrap-around 0..99
-			dial = ((dial-shift)%100 + 100) % 100
-		} else if dir == 'R' {
-			dial = (dial + shift) % 100
-		} else {
-			fmt.Fprintf(os.Stderr, "invalid direction at line %d: %q\n", lineNum, string(dir))
-			continue
-		}
-
-		fmt.Printf("%s %d -> %d\n", entry, start, dial)
-		if dial == 0 {
-			zeroCount++
-		}
+		lines = append(lines, scanner.Text())
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Fatalf("read error: %v", err)
 	}
 
+	outs, zeroCount := processEntries(lines)
+	for _, out := range outs {
+		fmt.Println(out)
+	}
 	fmt.Printf("Ended at 0 count: %d\n", zeroCount)
 }
