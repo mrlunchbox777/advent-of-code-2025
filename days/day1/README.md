@@ -15,3 +15,10 @@ L99
 ```
 
 The program starts the dial at `50`. For each entry it prints the entry, the starting value, and the ending value. The dial wraps around in the range `0-99`. At the end it prints how many times the dial ended at exactly `0`.
+
+## Thoughts On AI Solutions
+
+1. The AI correctly understood the problem requirements and provided a solution that processes the input file line by line, but it was pretty hamfisted in its approach.
+2. I asked it to add tests so it could verify it's correctness and start refactoring.
+3. The AI struggled to refactor the code into smaller functions, often creating functions that were too large or not well-defined. It did finally manage to break the code down into smaller functions after several iterations.
+4. I ran the solution against part 1 and it produced the correct results.
