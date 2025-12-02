@@ -40,3 +40,5 @@ go run . example-data.txt passes
 6. I ran the solution against part 2 and it produced the wrong results, it was too low.
 7. I asked the AI to debug its solution. It identified that the logic for counting passes through 0 was flawed and made adjustments. I then clarified the requirement with the "Be careful" text and it validated that the changes it made accounted for that.
 8. I ran the solution against part 2 again and it produced the correct results.
+
+It was an interesting exercise in seeing how well the AI could understand and implement the requirements, as well as how it handled debugging and refactoring. While it did eventually arrive at a correct solution, it required significant prompting and guidance to get there. I didn't have to review every line of code, but I did have to guide the AI through the process. I think having the AI write tests was particularly helpful in ensuring correctness, including the example data and edge cases.
