@@ -48,3 +48,13 @@ It was an interesting exercise in seeing how well the AI could understand and im
 - I did not provide any starter code or templates; the AI generated the entire solution from scratch.
 - I did not intervene in the coding process except to provide prompts and clarifications as needed.
 - I only updated this section of the README for this day.
+
+### Initial Prompts
+
+#### Part 1
+
+> build a go app in the day1 folder. It should accept a single parameter that is a path to a text file. That file will contain one entry per line, the entries are made of 2 parts: L or R and a number. The core entity in the app is a "dial" that will rotate left (minus) or right (plus), it ranges from 0-99. If it moves left (minus) at 0 it will loop to 99 rather than go negative, and if it moves right (plus) at 99 it will loop to 0 rather than go to 100+. The dial starts at 50. As it processes each entry it will post to console the entry (L68), the starting value (50), and the ending value (82). Finally, it will count how many times it ends at exactly 0 and print that at the very end.
+
+#### Part 2
+
+> add a second way to process the counting of 0's to count whenever it "passes" 0 in a move. This would count both passing 0 or ending at 0. This should be controlled by a mandatory second argument
