@@ -38,3 +38,5 @@ go run . example-data.txt passes
 4. I ran the solution against part 1 and it produced the correct results.
 5. For part 2, it understood the new requirement but initially failed to implement the logic to count passes through 0 correctly. After prompting and several iterations, it adjusted the logic and produced a working solution.
 6. I ran the solution against part 2 and it produced the wrong results, it was too low.
+7. I asked the AI to debug its solution. It identified that the logic for counting passes through 0 was flawed and made adjustments. I then clarified the requirement with the "Be careful" text and it validated that the changes it made accounted for that.
+8. I ran the solution against part 2 again and it produced the correct results.
