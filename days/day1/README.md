@@ -42,3 +42,9 @@ go run . example-data.txt passes
 8. I ran the solution against part 2 again and it produced the correct results.
 
 It was an interesting exercise in seeing how well the AI could understand and implement the requirements, as well as how it handled debugging and refactoring. While it did eventually arrive at a correct solution, it required significant prompting and guidance to get there. I didn't have to review every line of code, but I did have to guide the AI through the process. I think having the AI write tests was particularly helpful in ensuring correctness, including the example data and edge cases.
+
+- I did not give the AI the exact instructions from Advent of Code, but rather paraphrased them with my understanding of the problem.
+- I did not ask the AI to optimize for performance or efficiency.
+- I did not provide any starter code or templates; the AI generated the entire solution from scratch.
+- I did not intervene in the coding process except to provide prompts and clarifications as needed.
+- I only updated this section of the README for this day.
