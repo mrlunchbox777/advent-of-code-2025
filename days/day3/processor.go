@@ -30,33 +30,52 @@ func (e Entry) FindLargestNumber(n int) ([]rune, int) {
 		return nil, 0
 	}
 
-	// Try all combinations of n digits maintaining original order
+	// Optimized iterative combination generation
 	maxValue := 0
 	var maxDigits []rune
 
-	// Generate all combinations of n positions
-	var tryCombo func(start, depth int, indices []int)
-	tryCombo = func(start, depth int, indices []int) {
-		if depth == n {
-			// Calculate the value for this combination
-			value := 0
-			selected := make([]rune, n)
-			for i, idx := range indices {
-				selected[i] = digits[idx]
-				value = value*10 + int(digits[idx]-'0')
-			}
-			if value > maxValue {
-				maxValue = value
-				maxDigits = selected
-			}
-			return
+	// Pre-allocate arrays to avoid repeated allocations
+	indices := make([]int, n)
+	selected := make([]rune, n)
+
+	// Initialize indices to first n positions
+	for i := 0; i < n; i++ {
+		indices[i] = i
+	}
+
+	for {
+		// Calculate value for current combination
+		value := 0
+		for i := 0; i < n; i++ {
+			selected[i] = digits[indices[i]]
+			value = value*10 + int(digits[indices[i]]-'0')
 		}
-		for i := start; i < len(digits); i++ {
-			tryCombo(i+1, depth+1, append(indices, i))
+
+		if value > maxValue {
+			maxValue = value
+			maxDigits = make([]rune, n)
+			copy(maxDigits, selected)
+		}
+
+		// Generate next combination (lexicographic order)
+		// Find rightmost index that can be incremented
+		i := n - 1
+		for i >= 0 && indices[i] == len(digits)-n+i {
+			i--
+		}
+
+		// No more combinations
+		if i < 0 {
+			break
+		}
+
+		// Increment this index and reset all following indices
+		indices[i]++
+		for j := i + 1; j < n; j++ {
+			indices[j] = indices[j-1] + 1
 		}
 	}
 
-	tryCombo(0, 0, []int{})
 	return maxDigits, maxValue
 }
 
