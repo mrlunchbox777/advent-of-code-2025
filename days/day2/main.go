@@ -7,12 +7,19 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: go run . <filepath>")
+	if len(os.Args) < 3 {
+		fmt.Println("Usage: go run . <filepath> <mode>")
+		fmt.Println("  mode: 'exact' (pattern repeated exactly 2 times) or 'any' (pattern repeated 2+ times)")
 		os.Exit(1)
 	}
 
 	filePath := os.Args[1]
+	mode := os.Args[2]
+
+	if mode != "exact" && mode != "any" {
+		fmt.Printf("Invalid mode %q. Must be 'exact' or 'any'\n", mode)
+		os.Exit(1)
+	}
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		fmt.Printf("Error reading file: %v\n", err)
@@ -35,7 +42,7 @@ func main() {
 			continue
 		}
 
-		invalidIDs := r.FindRepeatedSequenceNumbers()
+		invalidIDs := r.FindRepeatedSequenceNumbers(mode)
 
 		if len(invalidIDs) > 0 {
 			fmt.Printf("%s has %d invalid ID(s): %v\n", entry, len(invalidIDs), invalidIDs)

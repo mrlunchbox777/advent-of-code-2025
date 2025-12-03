@@ -38,11 +38,12 @@ func ParseRange(s string) (Range, error) {
 
 // FindRepeatedSequenceNumbers finds all numbers in the range that are comprised
 // entirely of repeated sequences (e.g., 11, 1010, 222222)
-func (r Range) FindRepeatedSequenceNumbers() []int {
+// mode: "exact" for pattern repeated exactly 2 times, "any" for pattern repeated 2+ times
+func (r Range) FindRepeatedSequenceNumbers(mode string) []int {
 	var result []int
 
 	for n := r.Lower; n <= r.Upper; n++ {
-		if r.isRepeatedSequence(n) {
+		if r.isRepeatedSequence(n, mode) {
 			result = append(result, n)
 		}
 	}
@@ -51,22 +52,50 @@ func (r Range) FindRepeatedSequenceNumbers() []int {
 }
 
 // isRepeatedSequence checks if a number is comprised of a repeated pattern
-// Examples: 11 (pattern "1" x2), 1010 (pattern "10" x2), 222222 (pattern "222" x2)
-// Not: 101 (no repeating pattern), 111 (pattern "1" x3), 1111 (pattern "1" x4)
-// Rule: The number must be a pattern repeated EXACTLY 2 times
-func (r Range) isRepeatedSequence(n int) bool {
+// Examples (exact): 11 (pattern "1" x2), 1010 (pattern "10" x2), 222222 (pattern "222" x2)
+// Examples (any): 111 (pattern "1" x3), 123123123 (pattern "123" x3)
+// Not: 101 (no repeating pattern)
+// mode: "exact" requires pattern repeated exactly 2 times, "any" requires 2+ times
+func (r Range) isRepeatedSequence(n int, mode string) bool {
 	s := strconv.Itoa(n)
 	length := len(s)
 
-	// Number must have even length to be repeated exactly 2 times
-	if length%2 != 0 {
-		return false
+	if mode == "exact" {
+		// Number must have even length to be repeated exactly 2 times
+		if length%2 != 0 {
+			return false
+		}
+
+		// Check if first half equals second half
+		half := length / 2
+		pattern := s[:half]
+		secondHalf := s[half:]
+
+		return pattern == secondHalf
 	}
 
-	// Check if first half equals second half
-	half := length / 2
-	pattern := s[:half]
-	secondHalf := s[half:]
+	// mode == "any": check all possible pattern lengths
+	for patternLen := 1; patternLen <= length/2; patternLen++ {
+		// Pattern length must divide evenly into total length
+		if length%patternLen != 0 {
+			continue
+		}
 
-	return pattern == secondHalf
+		pattern := s[:patternLen]
+		repeats := length / patternLen
+
+		// Must repeat at least 2 times
+		if repeats < 2 {
+			continue
+		}
+
+		// Build the repeated string
+		repeated := strings.Repeat(pattern, repeats)
+
+		if repeated == s {
+			return true
+		}
+	}
+
+	return false
 }

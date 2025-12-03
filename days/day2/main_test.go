@@ -37,29 +37,59 @@ func TestParseRange(t *testing.T) {
 	}
 }
 
-func TestIsRepeatedSequence(t *testing.T) {
+func TestIsRepeatedSequenceExact(t *testing.T) {
 	r := Range{Lower: 0, Upper: 100000}
 
 	tests := []struct {
 		num      int
 		expected bool
 	}{
-		{11, true},         // "1" repeated
-		{22, true},         // "2" repeated
-		{99, true},         // "9" repeated
-		{1010, true},       // "10" repeated
-		{222222, true},     // "2" repeated
-		{446446, true},     // "446" repeated
+		{11, true},         // "1" x2
+		{22, true},         // "2" x2
+		{99, true},         // "9" x2
+		{1010, true},       // "10" x2
+		{222222, true},     // "222" x2
+		{446446, true},     // "446" x2
 		{101, false},       // no repeating pattern
 		{123, false},       // no repeating pattern
-		{1188511885, true}, // "11885" repeated
-		{38593859, true},   // "3859" repeated
+		{1188511885, true}, // "11885" x2
+		{38593859, true},   // "3859" x2
+		{111, false},       // "1" x3 (not exactly 2, odd length)
+		{1111, true},       // "11" x2
+		{123123123, false}, // "123" x3 (not exactly 2, odd length)
 	}
 
 	for _, tt := range tests {
-		result := r.isRepeatedSequence(tt.num)
+		result := r.isRepeatedSequence(tt.num, "exact")
 		if result != tt.expected {
-			t.Errorf("isRepeatedSequence(%d) = %v, want %v", tt.num, result, tt.expected)
+			t.Errorf("isRepeatedSequence(%d, exact) = %v, want %v", tt.num, result, tt.expected)
+		}
+	}
+}
+
+func TestIsRepeatedSequenceAny(t *testing.T) {
+	r := Range{Lower: 0, Upper: 100000}
+
+	tests := []struct {
+		num      int
+		expected bool
+	}{
+		{11, true},        // "1" x2
+		{111, true},       // "1" x3
+		{1111, true},      // "1" x4
+		{123123123, true}, // "123" x3
+		{1010, true},      // "10" x2
+		{101010, true},    // "10" x3
+		{222222, true},    // "2" x6 or "22" x3 or "222" x2
+		{101, false},      // no repeating pattern
+		{123, false},      // no repeating pattern
+		{12345, false},    // no repeating pattern
+	}
+
+	for _, tt := range tests {
+		result := r.isRepeatedSequence(tt.num, "any")
+		if result != tt.expected {
+			t.Errorf("isRepeatedSequence(%d, any) = %v, want %v", tt.num, result, tt.expected)
 		}
 	}
 }
@@ -82,7 +112,7 @@ func TestFindRepeatedSequenceNumbers(t *testing.T) {
 		if err != nil {
 			t.Fatalf("ParseRange(%q) error: %v", tt.rangeStr, err)
 		}
-		result := r.FindRepeatedSequenceNumbers()
+		result := r.FindRepeatedSequenceNumbers("exact")
 		if len(result) != len(tt.expected) {
 			t.Errorf("Range %s: got %d numbers, want %d: %v", tt.rangeStr, len(result), len(tt.expected), result)
 			continue
@@ -128,7 +158,7 @@ func TestProcessExampleData(t *testing.T) {
 			t.Fatalf("Error parsing range %q: %v", entry, err)
 		}
 
-		invalidIDs := r.FindRepeatedSequenceNumbers()
+		invalidIDs := r.FindRepeatedSequenceNumbers("exact")
 
 		expected, ok := expectedResults[entry]
 		if !ok {

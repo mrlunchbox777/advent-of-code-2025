@@ -4,22 +4,31 @@ This Go application identifies numbers within specified ranges that are comprise
 
 ## Problem Description
 
-Given ranges of numbers (e.g., `11-22`), find all numbers that consist of a pattern repeated multiple times:
-- Valid: `11` (pattern "1" repeated 2 times), `1010` (pattern "10" repeated 2 times), `222222` (pattern "2" repeated 6 times)
-- Invalid: `101` (no repeating pattern), `111` (odd-length single-digit pattern)
+Given ranges of numbers (e.g., `11-22`), find all numbers that consist of a pattern repeated multiple times.
 
-**Rule**: For single-digit patterns, the total length must be even. For multi-digit patterns, the pattern must divide evenly into the total length.
+### Modes
+
+**Exact Mode** (`exact`): Pattern must repeat exactly 2 times
+- Valid: `11` ("1" × 2), `1010` ("10" × 2), `222222` ("222" × 2), `1111` ("11" × 2)
+- Invalid: `101` (no pattern), `111` ("1" × 3, not exactly 2), `123123123` ("123" × 3, not exactly 2)
+
+**Any Mode** (`any`): Pattern must repeat 2 or more times
+- Valid: `11` ("1" × 2), `111` ("1" × 3), `1111` ("1" × 4), `123123123` ("123" × 3)
+- Invalid: `101` (no repeating pattern), `12345` (no pattern)
 
 ## Usage
 
 ```bash
-go run . <filepath>
+go run . <filepath> <mode>
 ```
 
-### Example
+Where `<mode>` is either `exact` or `any`.
 
+### Examples
+
+**Exact Mode:**
 ```bash
-go run . example-data.txt
+go run . example-data.txt exact
 ```
 
 **Output:**
@@ -35,6 +44,20 @@ go run . example-data.txt
 
 Total sum of invalid IDs: 1227775554
 ```
+
+**Any Mode:**
+```bash
+go run . puzzle-input.txt any
+```
+
+**Output (last line):**
+```
+Total sum of invalid IDs: 15704845910
+```
+
+**Comparison:**
+- Exact mode (puzzle-input.txt): 5398419778
+- Any mode (puzzle-input.txt): 15704845910
 
 ## Input Format
 
@@ -52,15 +75,17 @@ go test -v
 
 The tests validate:
 - Range parsing logic
-- Repeated sequence detection algorithm
-- Expected results for example data (sum = 1227775554)
+- Repeated sequence detection algorithm for both modes
+- Expected results for example data (exact mode sum = 1227775554)
 
 ## Implementation
 
 - **`Range` struct**: Represents a number range with lower and upper bounds
 - **`ParseRange`**: Parses string format "lower-upper" into a Range
-- **`FindRepeatedSequenceNumbers`**: Finds all repeated sequence numbers in the range
-- **`isRepeatedSequence`**: Checks if a number is comprised of a repeated pattern
+- **`FindRepeatedSequenceNumbers(mode)`**: Finds all repeated sequence numbers in the range based on mode
+- **`isRepeatedSequence(n, mode)`**: Checks if a number is comprised of a repeated pattern
+  - `exact` mode: Checks if the number can be split in half with both halves identical
+  - `any` mode: Tries all pattern lengths (1 to length/2) to find any repeating pattern with 2+ repetitions
 
 ## Thoughts On AI Solutions
 
@@ -68,6 +93,10 @@ The tests validate:
 2. I tested the solution against the puzzle input and it calculated the answer too high.
 3. I asked the AI to debug its solution. It identified that the logic for detecting repeated sequences needed to be exactly twice, something mentioned in the puzzle input but not in my initial prompt. It made adjustments to the logic accordingly.
 4. I tested the solution against the puzzle input again and it produced the correct results.
+5. I asked the AI to handle any mode where the pattern can repeat 2 or more times. It adjusted the logic and produced a working solution. (This is basically what it had originally tried to do before I clarified the exact requirement.)
+6. I tested the solution against the puzzle input again and it produced the correct results.
+
+Today showed some real power of the AI in being able to debug issues as well as failures in generated code. It created bad code that didn't even compile, but was able to identify and fix the issues itself. It also demonstrated an ability to identify requirements that were not explicitly stated in the prompt but were in the puzzle description (not provided to the AI). The tests were particularly helpful in ensuring correctness, including the example data and edge cases.
 
 - I did not give the AI the exact instructions from Advent of Code, but rather paraphrased them with my understanding of the problem.
 - I did not ask the AI to optimize for performance or efficiency.
@@ -91,5 +120,5 @@ The tests validate:
 
 #### Part 2
 
-> 
+> Add a second mandatory flag that will allow the current processing, but also allow searching for patterns that repeat any number of times rather than just twice (and handle the final sum accordingly), e.g. 123123123 would not currently be an identified pattern, but with the new requirement would be
 
