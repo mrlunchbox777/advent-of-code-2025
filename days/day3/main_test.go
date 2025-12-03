@@ -88,3 +88,83 @@ func TestProcessExampleData(t *testing.T) {
 		t.Errorf("Expected 4 lines, got %d", lineCount)
 	}
 }
+
+func TestFindLargestNumberVariableDigits(t *testing.T) {
+	tests := []struct {
+		input          string
+		digitCount     int
+		expectedDigits string
+		expectedResult int
+		description    string
+	}{
+		{"12345", 3, "345", 345, "3 digits from 12345"},
+		{"987654321111111", 5, "98765", 98765, "5 digits from 987654321111111"},
+		{"987654321111111", 12, "987654321111", 987654321111, "12 digits from 987654321111111"},
+		{"811111111111119", 12, "811111111119", 811111111119, "12 digits from 811111111111119"},
+		{"234234234234278", 12, "434234234278", 434234234278, "12 digits from 234234234234278"},
+		{"818181911112111", 12, "888911112111", 888911112111, "12 digits from 818181911112111"},
+	}
+
+	for _, tt := range tests {
+		entry := NewEntry(tt.input)
+		digits, result := entry.FindLargestNumber(tt.digitCount)
+
+		if result != tt.expectedResult {
+			t.Errorf("%s: FindLargestNumber(%q, %d) = %d, want %d",
+				tt.description, tt.input, tt.digitCount, result, tt.expectedResult)
+		}
+
+		digitStr := string(digits)
+		if digitStr != tt.expectedDigits {
+			t.Errorf("%s: got digits %q, want %q",
+				tt.description, digitStr, tt.expectedDigits)
+		}
+	}
+}
+
+func TestProcessExampleData12Digits(t *testing.T) {
+	file, err := os.Open("example-data.txt")
+	if err != nil {
+		t.Fatalf("Failed to open example-data.txt: %v", err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	totalSum := 0
+	lineCount := 0
+
+	expectedResults := []int{987654321111, 811111111119, 434234234278, 888911112111}
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "" {
+			continue
+		}
+
+		entry := NewEntry(line)
+		_, result := entry.FindLargestNumber(12)
+
+		if lineCount < len(expectedResults) {
+			if result != expectedResults[lineCount] {
+				t.Errorf("Line %d (%s): got %d, want %d",
+					lineCount+1, line, result, expectedResults[lineCount])
+			}
+		}
+
+		totalSum += result
+		lineCount++
+	}
+
+	if err := scanner.Err(); err != nil {
+		t.Fatalf("Error reading file: %v", err)
+	}
+
+	expectedSum := 3121910778619
+	if totalSum != expectedSum {
+		t.Errorf("Total sum = %d, want %d", totalSum, expectedSum)
+	}
+
+	if lineCount != 4 {
+		t.Errorf("Expected 4 lines, got %d", lineCount)
+	}
+}

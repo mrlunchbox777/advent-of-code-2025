@@ -14,10 +14,10 @@ func NewEntry(raw string) Entry {
 	return Entry{Raw: raw}
 }
 
-// FindLargestTwoDigitNumber finds the two digits that form the largest two-digit number
-// by selecting two digits in order (without reordering) and concatenating them in that order.
-// Returns the two digits and the resulting number.
-func (e Entry) FindLargestTwoDigitNumber() (rune, rune, int) {
+// FindLargestNumber finds the n digits that form the largest n-digit number
+// by selecting n digits in order (without reordering) and concatenating them in that order.
+// Returns the selected digits as a slice and the resulting number.
+func (e Entry) FindLargestNumber(n int) ([]rune, int) {
 	// Extract all digits from the raw string
 	var digits []rune
 	for _, ch := range e.Raw {
@@ -26,31 +26,46 @@ func (e Entry) FindLargestTwoDigitNumber() (rune, rune, int) {
 		}
 	}
 
-	if len(digits) < 2 {
-		return '0', '0', 0
+	if len(digits) < n {
+		return nil, 0
 	}
 
-	// Try all pairs of digits maintaining original order
-	// Concatenate in the order they appear (i before j)
+	// Try all combinations of n digits maintaining original order
 	maxValue := 0
-	maxDigit1 := '0'
-	maxDigit2 := '0'
+	var maxDigits []rune
 
-	for i := 0; i < len(digits); i++ {
-		for j := i + 1; j < len(digits); j++ {
-			d1 := int(digits[i] - '0')
-			d2 := int(digits[j] - '0')
-
-			// Concatenate in order: first digit then second digit
-			value := d1*10 + d2
-
+	// Generate all combinations of n positions
+	var tryCombo func(start, depth int, indices []int)
+	tryCombo = func(start, depth int, indices []int) {
+		if depth == n {
+			// Calculate the value for this combination
+			value := 0
+			selected := make([]rune, n)
+			for i, idx := range indices {
+				selected[i] = digits[idx]
+				value = value*10 + int(digits[idx]-'0')
+			}
 			if value > maxValue {
 				maxValue = value
-				maxDigit1 = digits[i]
-				maxDigit2 = digits[j]
+				maxDigits = selected
 			}
+			return
+		}
+		for i := start; i < len(digits); i++ {
+			tryCombo(i+1, depth+1, append(indices, i))
 		}
 	}
 
-	return maxDigit1, maxDigit2, maxValue
+	tryCombo(0, 0, []int{})
+	return maxDigits, maxValue
+}
+
+// FindLargestTwoDigitNumber is a convenience wrapper for FindLargestNumber(2)
+// Kept for backward compatibility with existing tests
+func (e Entry) FindLargestTwoDigitNumber() (rune, rune, int) {
+	digits, value := e.FindLargestNumber(2)
+	if len(digits) < 2 {
+		return '0', '0', 0
+	}
+	return digits[0], digits[1], value
 }
