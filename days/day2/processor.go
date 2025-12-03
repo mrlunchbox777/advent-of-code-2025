@@ -51,34 +51,22 @@ func (r Range) FindRepeatedSequenceNumbers() []int {
 }
 
 // isRepeatedSequence checks if a number is comprised of a repeated pattern
-// Examples: 11 (pattern "1" x2), 1010 (pattern "10" x2), 222222 (pattern "2" x6)
-// Not: 101 (no repeating pattern), 111 (pattern "1" x3, but odd total length for single char)
-// Rule: Must have even total length OR pattern length >= 2
+// Examples: 11 (pattern "1" x2), 1010 (pattern "10" x2), 222222 (pattern "222" x2)
+// Not: 101 (no repeating pattern), 111 (pattern "1" x3), 1111 (pattern "1" x4)
+// Rule: The number must be a pattern repeated EXACTLY 2 times
 func (r Range) isRepeatedSequence(n int) bool {
 	s := strconv.Itoa(n)
 	length := len(s)
 
-	// Try all possible pattern lengths from 1 to length/2
-	for patternLen := 1; patternLen <= length/2; patternLen++ {
-		// Pattern length must divide evenly into total length
-		if length%patternLen != 0 {
-			continue
-		}
-
-		pattern := s[:patternLen]
-		repeats := length / patternLen
-
-		// Build the repeated string
-		repeated := strings.Repeat(pattern, repeats)
-
-		if repeated == s {
-			// For single-digit patterns, total length must be even
-			if patternLen == 1 && length%2 != 0 {
-				continue
-			}
-			return true
-		}
+	// Number must have even length to be repeated exactly 2 times
+	if length%2 != 0 {
+		return false
 	}
 
-	return false
+	// Check if first half equals second half
+	half := length / 2
+	pattern := s[:half]
+	secondHalf := s[half:]
+
+	return pattern == secondHalf
 }
