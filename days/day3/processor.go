@@ -16,6 +16,8 @@ func NewEntry(raw string) Entry {
 
 // FindLargestNumber finds the n digits that form the largest n-digit number
 // by selecting n digits in order (without reordering) and concatenating them in that order.
+// Uses a greedy algorithm: for each position, select the largest digit that still leaves
+// enough remaining digits to complete the n-digit number.
 // Returns the selected digits as a slice and the resulting number.
 func (e Entry) FindLargestNumber(n int) ([]rune, int) {
 	// Extract all digits from the raw string
@@ -30,53 +32,38 @@ func (e Entry) FindLargestNumber(n int) ([]rune, int) {
 		return nil, 0
 	}
 
-	// Optimized iterative combination generation
-	maxValue := 0
-	var maxDigits []rune
+	// Greedy algorithm: for each position, pick the largest digit
+	// that leaves enough digits remaining to complete the selection
+	result := make([]rune, 0, n)
+	startPos := 0
 
-	// Pre-allocate arrays to avoid repeated allocations
-	indices := make([]int, n)
-	selected := make([]rune, n)
+	for len(result) < n {
+		remaining := n - len(result) // how many more digits we need
+		maxDigit := '0' - 1          // invalid value to ensure first digit is always picked
+		maxPos := -1
 
-	// Initialize indices to first n positions
-	for i := 0; i < n; i++ {
-		indices[i] = i
+		// Search window: we can only pick from positions that leave enough digits after
+		// searchEnd is the last position we can pick from and still have enough digits
+		searchEnd := len(digits) - remaining + 1
+
+		for i := startPos; i < searchEnd; i++ {
+			if digits[i] > maxDigit {
+				maxDigit = digits[i]
+				maxPos = i
+			}
+		}
+
+		result = append(result, maxDigit)
+		startPos = maxPos + 1 // next search starts after the position we just picked
 	}
 
-	for {
-		// Calculate value for current combination
-		value := 0
-		for i := 0; i < n; i++ {
-			selected[i] = digits[indices[i]]
-			value = value*10 + int(digits[indices[i]]-'0')
-		}
-
-		if value > maxValue {
-			maxValue = value
-			maxDigits = make([]rune, n)
-			copy(maxDigits, selected)
-		}
-
-		// Generate next combination (lexicographic order)
-		// Find rightmost index that can be incremented
-		i := n - 1
-		for i >= 0 && indices[i] == len(digits)-n+i {
-			i--
-		}
-
-		// No more combinations
-		if i < 0 {
-			break
-		}
-
-		// Increment this index and reset all following indices
-		indices[i]++
-		for j := i + 1; j < n; j++ {
-			indices[j] = indices[j-1] + 1
-		}
+	// Calculate the numeric value
+	value := 0
+	for _, d := range result {
+		value = value*10 + int(d-'0')
 	}
 
-	return maxDigits, maxValue
+	return result, value
 }
 
 // FindLargestTwoDigitNumber is a convenience wrapper for FindLargestNumber(2)
