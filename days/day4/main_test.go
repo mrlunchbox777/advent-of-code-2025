@@ -116,3 +116,73 @@ func TestGetCell(t *testing.T) {
 		}
 	}
 }
+
+func TestReplacePositions(t *testing.T) {
+	grid := &Grid{
+		Cells: [][]rune{
+			{'@', '@', '@'},
+			{'@', '@', '@'},
+			{'@', '@', '@'},
+		},
+		Width:  3,
+		Height: 3,
+	}
+
+	positions := []Position{
+		{X: 1, Y: 1}, // bottom-left
+		{X: 3, Y: 3}, // top-right
+		{X: 2, Y: 2}, // center
+	}
+
+	newGrid := grid.ReplacePositions(positions)
+
+	// Check that positions were replaced
+	if newGrid.GetCell(Position{X: 1, Y: 1}) != '.' {
+		t.Errorf("Position [1,1] should be '.'")
+	}
+	if newGrid.GetCell(Position{X: 3, Y: 3}) != '.' {
+		t.Errorf("Position [3,3] should be '.'")
+	}
+	if newGrid.GetCell(Position{X: 2, Y: 2}) != '.' {
+		t.Errorf("Position [2,2] should be '.'")
+	}
+
+	// Check that other positions remain unchanged
+	if newGrid.GetCell(Position{X: 1, Y: 3}) != '@' {
+		t.Errorf("Position [1,3] should still be '@'")
+	}
+
+	// Check that original grid is unchanged
+	if grid.GetCell(Position{X: 1, Y: 1}) != '@' {
+		t.Errorf("Original grid should be unchanged")
+	}
+}
+
+func TestCompletionMode(t *testing.T) {
+	grid, err := NewGridFromFile("example-data.txt")
+	if err != nil {
+		t.Fatalf("Failed to load example-data.txt: %v", err)
+	}
+
+	totalSelected := 0
+	rounds := 0
+
+	for {
+		selected := grid.FindSelectedPositions()
+		if len(selected) == 0 {
+			break
+		}
+
+		totalSelected += len(selected)
+		rounds++
+		grid = grid.ReplacePositions(selected)
+	}
+
+	if totalSelected != 43 {
+		t.Errorf("Expected 43 total selections in completion mode, got %d", totalSelected)
+	}
+
+	if rounds != 9 {
+		t.Errorf("Expected 9 rounds, got %d", rounds)
+	}
+}

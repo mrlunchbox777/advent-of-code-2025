@@ -109,3 +109,30 @@ func (g *Grid) FindSelectedPositions() []Position {
 
 	return selected
 }
+
+// ReplacePositions creates a new Grid with the specified positions replaced by '.'
+func (g *Grid) ReplacePositions(positions []Position) *Grid {
+	// Create a deep copy of the cells
+	newCells := make([][]rune, g.Height)
+	for i := range g.Cells {
+		newCells[i] = make([]rune, len(g.Cells[i]))
+		copy(newCells[i], g.Cells[i])
+	}
+
+	// Replace the specified positions with '.'
+	for _, pos := range positions {
+		// Convert 1-based position to 0-based array indices
+		row := g.Height - pos.Y
+		col := pos.X - 1
+
+		if row >= 0 && row < g.Height && col >= 0 && col < g.Width {
+			newCells[row][col] = '.'
+		}
+	}
+
+	return &Grid{
+		Cells:  newCells,
+		Width:  g.Width,
+		Height: g.Height,
+	}
+}
