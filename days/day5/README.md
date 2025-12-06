@@ -118,7 +118,7 @@ go test -v
 
 **Validate mode** uses range-based validation instead of building a complete set, making it efficient for ranges in the billions. Each number is checked against the ranges in O(r) per number, where r = number of ranges, avoiding memory issues from materializing billion-element sets.
 
-**Total mode** builds a set to count unique numbers, so it's only efficient when ranges are reasonably sized. For very large ranges (billions), this mode will require significant memory and time.
+**Total mode** uses a range merging algorithm that sorts ranges and merges overlapping/adjacent ranges, then calculates counts mathematically. This runs in O(r log r) time for sorting plus O(r) for merging, where r = number of ranges. Memory usage is O(r) regardless of range size, making it efficient even for ranges in the billions or trillions. The algorithm never materializes individual numbers.
 
 ## Thoughts On AI Solutions
 
@@ -126,6 +126,7 @@ go test -v
 1. I attempted the puzzle input, but the AI generated a solution that was far too slow. I asked it to optimize for performance, and it produced a much better solution that checked each number against the ranges directly instead of building a massive set of valid numbers. This worked well and completed in a reasonable time.
 1. I attempted the solution again, it ran basically instantly, and it gave the correct answer.
 1. The AI updated the program to add the second mode, and it seemed fine for the example input.
+1. I tested the second mode with the puzzle input, and it was far too slow again. I asked it to optimize for performance, and it produced a solution that merged ranges and calculated counts mathematically instead of materializing all valid numbers. This worked well and completed in a reasonable time for the test data it self-generated, but was still too slow for the puzzle-input.
 
 - I did not give the AI the exact instructions from Advent of Code, but rather paraphrased them with my understanding of the problem.
 - ~~I did not ask the AI to optimize for performance or efficiency.~~

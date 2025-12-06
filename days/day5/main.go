@@ -35,13 +35,45 @@ func (rl *RangeList) IsValid(n int) bool {
 }
 
 func (rl *RangeList) CountTotalValid() int {
-	validSet := make(map[int]bool)
-	for _, r := range rl.Ranges {
-		for i := r.Start; i <= r.End; i++ {
-			validSet[i] = true
+	if len(rl.Ranges) == 0 {
+		return 0
+	}
+	
+	// Sort ranges by start position
+	ranges := make([]Range, len(rl.Ranges))
+	copy(ranges, rl.Ranges)
+	
+	for i := 0; i < len(ranges); i++ {
+		for j := i + 1; j < len(ranges); j++ {
+			if ranges[j].Start < ranges[i].Start {
+				ranges[i], ranges[j] = ranges[j], ranges[i]
+			}
 		}
 	}
-	return len(validSet)
+	
+	// Merge overlapping ranges and count
+	total := 0
+	currentStart := ranges[0].Start
+	currentEnd := ranges[0].End
+	
+	for i := 1; i < len(ranges); i++ {
+		if ranges[i].Start <= currentEnd+1 {
+			// Overlapping or adjacent - merge
+			if ranges[i].End > currentEnd {
+				currentEnd = ranges[i].End
+			}
+		} else {
+			// No overlap - count current range and start new one
+			total += currentEnd - currentStart + 1
+			currentStart = ranges[i].Start
+			currentEnd = ranges[i].End
+		}
+	}
+	
+	// Add the last range
+	total += currentEnd - currentStart + 1
+	
+	return total
 }
 
 type NumberList struct {

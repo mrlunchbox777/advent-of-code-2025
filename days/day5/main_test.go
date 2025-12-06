@@ -85,6 +85,50 @@ func TestRangeListCountTotalValid(t *testing.T) {
 	}
 }
 
+func TestRangeListCountTotalValidLargeNumbers(t *testing.T) {
+	rl := &RangeList{}
+	// Test with billion-scale ranges
+	rl.AddRange(Range{Start: 1000000000, End: 1000000100})  // 101 numbers
+	rl.AddRange(Range{Start: 2000000000, End: 2000000200})  // 201 numbers
+	rl.AddRange(Range{Start: 1000000050, End: 1000000150})  // Overlaps with first, adds 50
+	
+	count := rl.CountTotalValid()
+	
+	// First range: 101, second: 201, third adds 50 (1000000101-1000000150)
+	expected := 101 + 201 + 50
+	if count != expected {
+		t.Errorf("Expected %d total possible valid numbers, got %d", expected, count)
+	}
+}
+
+func TestRangeListCountTotalValidNoOverlap(t *testing.T) {
+	rl := &RangeList{}
+	rl.AddRange(Range{Start: 1, End: 10})
+	rl.AddRange(Range{Start: 20, End: 30})
+	rl.AddRange(Range{Start: 40, End: 50})
+	
+	count := rl.CountTotalValid()
+	
+	// 10 + 11 + 11 = 32
+	if count != 32 {
+		t.Errorf("Expected 32 total possible valid numbers, got %d", count)
+	}
+}
+
+func TestRangeListCountTotalValidFullOverlap(t *testing.T) {
+	rl := &RangeList{}
+	rl.AddRange(Range{Start: 1, End: 100})
+	rl.AddRange(Range{Start: 10, End: 50})
+	rl.AddRange(Range{Start: 25, End: 75})
+	
+	count := rl.CountTotalValid()
+	
+	// All merged into 1-100 = 100
+	if count != 100 {
+		t.Errorf("Expected 100 total possible valid numbers, got %d", count)
+	}
+}
+
 func TestParseRange(t *testing.T) {
 	tests := []struct {
 		input       string
