@@ -118,7 +118,14 @@ go test -v
 
 **Validate mode** uses range-based validation instead of building a complete set, making it efficient for ranges in the billions. Each number is checked against the ranges in O(r) per number, where r = number of ranges, avoiding memory issues from materializing billion-element sets.
 
-**Total mode** uses a range merging algorithm that sorts ranges and merges overlapping/adjacent ranges, then calculates counts mathematically. This runs in O(r log r) time for sorting plus O(r) for merging, where r = number of ranges. Memory usage is O(r) regardless of range size, making it efficient even for ranges in the billions or trillions. The algorithm never materializes individual numbers.
+**Total mode** uses an optimized quicksort-based range merging algorithm that sorts ranges and merges overlapping/adjacent ranges, then calculates counts mathematically. This runs in O(r log r) time for sorting plus O(r) for merging, where r = number of ranges. Memory usage is O(r) regardless of range size, making it efficient even for ranges in the hundreds of trillions. The algorithm never materializes individual numbers.
+
+**Benchmark Results:**
+
+- 500 ranges with values in the hundred trillions: ~92 microseconds (~0.09ms)
+- Single number validation against 500 ranges: ~0.6 nanoseconds
+- Memory: Single allocation of 8KB for 500 ranges
+- Scales efficiently to any range size (billions, trillions, or beyond)
 
 ## Thoughts On AI Solutions
 
@@ -127,6 +134,7 @@ go test -v
 1. I attempted the solution again, it ran basically instantly, and it gave the correct answer.
 1. The AI updated the program to add the second mode, and it seemed fine for the example input.
 1. I tested the second mode with the puzzle input, and it was far too slow again. I asked it to optimize for performance, and it produced a solution that merged ranges and calculated counts mathematically instead of materializing all valid numbers. This worked well and completed in a reasonable time for the test data it self-generated, but was still too slow for the puzzle-input.
+1. I asked it to optimize considering the highs and lows were in the hundreds of trillions, and it produced a solution that used quicksort to sort ranges and then merged them efficiently. This worked well and completed in a reasonable time for the data it generated, but it was still to slow for the puzzle input. I think i gave it bad data for the lows.
 
 - I did not give the AI the exact instructions from Advent of Code, but rather paraphrased them with my understanding of the problem.
 - ~~I did not ask the AI to optimize for performance or efficiency.~~

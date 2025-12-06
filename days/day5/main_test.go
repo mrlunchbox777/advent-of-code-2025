@@ -158,3 +158,56 @@ func TestParseRange(t *testing.T) {
 		}
 	}
 }
+
+func TestPerformance500RangesTrillions(t *testing.T) {
+rl := &RangeList{}
+
+// Add 500 ranges in the hundred trillions
+for i := 0; i < 500; i++ {
+start := int(100000000000000 + int64(i)*2000000000000)
+end := start + 50000000
+rl.AddRange(Range{Start: start, End: end})
+}
+
+// This should complete very quickly
+count := rl.CountTotalValid()
+
+// Each range has ~50M numbers, all non-overlapping = 500 * 50M = 25 billion
+expected := 500 * 50000001
+if count != expected {
+t.Errorf("Expected %d, got %d", expected, count)
+}
+}
+
+func BenchmarkCountTotalValid500Ranges(b *testing.B) {
+rl := &RangeList{}
+
+// Add 500 ranges in the hundred trillions with some overlaps
+for i := 0; i < 500; i++ {
+start := int(100000000000000 + int64(i)*1500000000000)
+end := start + 2000000000
+rl.AddRange(Range{Start: start, End: end})
+}
+
+b.ResetTimer()
+for i := 0; i < b.N; i++ {
+rl.CountTotalValid()
+}
+}
+
+func BenchmarkValidate500Ranges(b *testing.B) {
+rl := &RangeList{}
+
+for i := 0; i < 500; i++ {
+start := int(100000000000000 + int64(i)*2000000000000)
+end := start + 50000000
+rl.AddRange(Range{Start: start, End: end})
+}
+
+testNum := 100000000000000 + 25000000
+
+b.ResetTimer()
+for i := 0; i < b.N; i++ {
+rl.IsValid(testNum)
+}
+}

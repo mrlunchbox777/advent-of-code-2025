@@ -39,17 +39,10 @@ func (rl *RangeList) CountTotalValid() int {
 		return 0
 	}
 	
-	// Sort ranges by start position
+	// Sort ranges by start position using efficient quicksort-style algorithm
 	ranges := make([]Range, len(rl.Ranges))
 	copy(ranges, rl.Ranges)
-	
-	for i := 0; i < len(ranges); i++ {
-		for j := i + 1; j < len(ranges); j++ {
-			if ranges[j].Start < ranges[i].Start {
-				ranges[i], ranges[j] = ranges[j], ranges[i]
-			}
-		}
-	}
+	quicksortRanges(ranges, 0, len(ranges)-1)
 	
 	// Merge overlapping ranges and count
 	total := 0
@@ -74,6 +67,28 @@ func (rl *RangeList) CountTotalValid() int {
 	total += currentEnd - currentStart + 1
 	
 	return total
+}
+
+func quicksortRanges(ranges []Range, low, high int) {
+	if low < high {
+		pi := partitionRanges(ranges, low, high)
+		quicksortRanges(ranges, low, pi-1)
+		quicksortRanges(ranges, pi+1, high)
+	}
+}
+
+func partitionRanges(ranges []Range, low, high int) int {
+	pivot := ranges[high].Start
+	i := low - 1
+	
+	for j := low; j < high; j++ {
+		if ranges[j].Start < pivot {
+			i++
+			ranges[i], ranges[j] = ranges[j], ranges[i]
+		}
+	}
+	ranges[i+1], ranges[high] = ranges[high], ranges[i+1]
+	return i + 1
 }
 
 type NumberList struct {
