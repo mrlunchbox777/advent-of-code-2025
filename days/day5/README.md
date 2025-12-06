@@ -93,7 +93,7 @@ The application uses range-based validation instead of building a complete set, 
 1. I attempted the solution again, it ran basically instantly, and it gave the correct answer.
 
 - I did not give the AI the exact instructions from Advent of Code, but rather paraphrased them with my understanding of the problem.
-- I did not ask the AI to optimize for performance or efficiency.
+- ~~I did not ask the AI to optimize for performance or efficiency.~~
 - I did not provide any starter code or templates; the AI generated the entire solution from scratch.
 - I did not intervene in the coding process except to provide prompts and clarifications as needed.
 - I only updated this section of the README for this day.
