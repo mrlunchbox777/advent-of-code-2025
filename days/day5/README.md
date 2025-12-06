@@ -139,6 +139,9 @@ go test -v
 1. I asked it to optimize considering the highs and lows were in the hundreds of trillions, and it produced a solution that used quicksort to sort ranges and then merged them efficiently. This worked well and completed in a reasonable time for the data it generated, but it was still to slow for the puzzle input. I think i gave it bad data for the lows.
 1. I asked it to optimize further for lows in the billions and highs in the quadrillions and it was still too slow for the puzzle input.
 1. I tested it with the puzzle input, but realized I may have been doing bad testing for some of the previous iterations and will need to go back and re-test those to be sure. It is getting the correct answer.
+1. My poor testing went all the way to the first optimization request for part 2. I checked out `f27cd2788f83944939cf7d0321120d2ad86aec70` and that solution was able to produce the results immediately.
+
+Today I was reminded that it is very important to monitor your process and test effectively. I wasted a lot of time chasing optimizations that were not needed because I was not testing properly. I also learned that the AI can produce very efficient algorithms when prompted correctly, but it may take several iterations to get there.
 
 - I did not give the AI the exact instructions from Advent of Code, but rather paraphrased them with my understanding of the problem.
 - ~~I did not ask the AI to optimize for performance or efficiency.~~
