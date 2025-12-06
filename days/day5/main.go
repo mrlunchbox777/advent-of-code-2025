@@ -9,11 +9,11 @@ import (
 )
 
 type Range struct {
-	Start int
-	End   int
+	Start int64
+	End   int64
 }
 
-func (r Range) Contains(n int) bool {
+func (r Range) Contains(n int64) bool {
 	return n >= r.Start && n <= r.End
 }
 
@@ -25,7 +25,7 @@ func (rl *RangeList) AddRange(r Range) {
 	rl.Ranges = append(rl.Ranges, r)
 }
 
-func (rl *RangeList) IsValid(n int) bool {
+func (rl *RangeList) IsValid(n int64) bool {
 	for _, r := range rl.Ranges {
 		if r.Contains(n) {
 			return true
@@ -34,7 +34,7 @@ func (rl *RangeList) IsValid(n int) bool {
 	return false
 }
 
-func (rl *RangeList) CountTotalValid() int {
+func (rl *RangeList) CountTotalValid() int64 {
 	if len(rl.Ranges) == 0 {
 		return 0
 	}
@@ -45,7 +45,7 @@ func (rl *RangeList) CountTotalValid() int {
 	quicksortRanges(ranges, 0, len(ranges)-1)
 	
 	// Merge overlapping ranges and count
-	total := 0
+	var total int64 = 0
 	currentStart := ranges[0].Start
 	currentEnd := ranges[0].End
 	
@@ -92,15 +92,15 @@ func partitionRanges(ranges []Range, low, high int) int {
 }
 
 type NumberList struct {
-	Numbers []int
+	Numbers []int64
 }
 
-func (nl *NumberList) AddNumber(n int) {
+func (nl *NumberList) AddNumber(n int64) {
 	nl.Numbers = append(nl.Numbers, n)
 }
 
-func (nl *NumberList) ValidateAgainstRanges(rangeList *RangeList) int {
-	count := 0
+func (nl *NumberList) ValidateAgainstRanges(rangeList *RangeList) int64 {
+	var count int64 = 0
 	for _, num := range nl.Numbers {
 		valid := rangeList.IsValid(num)
 		fmt.Printf("%d: %t\n", num, valid)
@@ -116,11 +116,11 @@ func parseRange(line string) (Range, error) {
 	if len(parts) != 2 {
 		return Range{}, fmt.Errorf("invalid range format: %s", line)
 	}
-	start, err := strconv.Atoi(strings.TrimSpace(parts[0]))
+	start, err := strconv.ParseInt(strings.TrimSpace(parts[0]), 10, 64)
 	if err != nil {
 		return Range{}, err
 	}
-	end, err := strconv.Atoi(strings.TrimSpace(parts[1]))
+	end, err := strconv.ParseInt(strings.TrimSpace(parts[1]), 10, 64)
 	if err != nil {
 		return Range{}, err
 	}
@@ -173,7 +173,7 @@ func main() {
 			}
 			rangeList.AddRange(r)
 		} else {
-			num, err := strconv.Atoi(line)
+			num, err := strconv.ParseInt(line, 10, 64)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error parsing number '%s': %v\n", line, err)
 				os.Exit(1)

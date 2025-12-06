@@ -123,9 +123,11 @@ go test -v
 **Benchmark Results:**
 
 - 500 ranges with values in the hundred trillions: ~92 microseconds (~0.09ms)
+- 500 ranges from billions to quadrillions: ~92 microseconds (~0.09ms)
 - Single number validation against 500 ranges: ~0.6 nanoseconds
 - Memory: Single allocation of 8KB for 500 ranges
-- Scales efficiently to any range size (billions, trillions, or beyond)
+- Supports full int64 range: -9,223,372,036,854,775,808 to 9,223,372,036,854,775,807
+- Scales efficiently to any range size within int64 limits
 
 ## Thoughts On AI Solutions
 
@@ -135,6 +137,7 @@ go test -v
 1. The AI updated the program to add the second mode, and it seemed fine for the example input.
 1. I tested the second mode with the puzzle input, and it was far too slow again. I asked it to optimize for performance, and it produced a solution that merged ranges and calculated counts mathematically instead of materializing all valid numbers. This worked well and completed in a reasonable time for the test data it self-generated, but was still too slow for the puzzle-input.
 1. I asked it to optimize considering the highs and lows were in the hundreds of trillions, and it produced a solution that used quicksort to sort ranges and then merged them efficiently. This worked well and completed in a reasonable time for the data it generated, but it was still to slow for the puzzle input. I think i gave it bad data for the lows.
+1. I asked it to optimize further for lows in the billions and highs in the quadrillions and it was still too slow for the puzzle input.
 
 - I did not give the AI the exact instructions from Advent of Code, but rather paraphrased them with my understanding of the problem.
 - ~~I did not ask the AI to optimize for performance or efficiency.~~

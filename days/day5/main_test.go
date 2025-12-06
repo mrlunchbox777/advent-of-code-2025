@@ -8,7 +8,7 @@ func TestRangeContains(t *testing.T) {
 	r := Range{Start: 10, End: 20}
 	
 	tests := []struct {
-		num      int
+		num      int64
 		expected bool
 	}{
 		{5, false},
@@ -33,8 +33,8 @@ func TestRangeListIsValid(t *testing.T) {
 	rl.AddRange(Range{Start: 16, End: 20})
 	rl.AddRange(Range{Start: 12, End: 18})
 	
-	expectedValid := []int{3, 4, 5, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
-	expectedInvalid := []int{1, 2, 6, 7, 8, 9, 21, 32}
+	expectedValid := []int64{3, 4, 5, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
+	expectedInvalid := []int64{1, 2, 6, 7, 8, 9, 21, 32}
 	
 	for _, num := range expectedValid {
 		if !rl.IsValid(num) {
@@ -95,7 +95,23 @@ func TestRangeListCountTotalValidLargeNumbers(t *testing.T) {
 	count := rl.CountTotalValid()
 	
 	// First range: 101, second: 201, third adds 50 (1000000101-1000000150)
-	expected := 101 + 201 + 50
+	var expected int64 = 101 + 201 + 50
+	if count != expected {
+		t.Errorf("Expected %d total possible valid numbers, got %d", expected, count)
+	}
+}
+
+func TestRangeListCountTotalValidQuadrillions(t *testing.T) {
+	rl := &RangeList{}
+	// Test with quadrillion-scale ranges (low billions, high quadrillions)
+	rl.AddRange(Range{Start: 1000000000, End: 1000000000000000})  // 1 billion to 1 quadrillion
+	rl.AddRange(Range{Start: 2000000000, End: 2000000000000000})  // 2 billion to 2 quadrillion
+	rl.AddRange(Range{Start: 1500000000, End: 1500000000000000})  // 1.5 billion to 1.5 quadrillion
+	
+	count := rl.CountTotalValid()
+	
+	// Should merge and calculate correctly
+	var expected int64 = 2000000000000000 - 1000000000 + 1
 	if count != expected {
 		t.Errorf("Expected %d total possible valid numbers, got %d", expected, count)
 	}
@@ -160,54 +176,70 @@ func TestParseRange(t *testing.T) {
 }
 
 func TestPerformance500RangesTrillions(t *testing.T) {
-rl := &RangeList{}
-
-// Add 500 ranges in the hundred trillions
-for i := 0; i < 500; i++ {
-start := int(100000000000000 + int64(i)*2000000000000)
-end := start + 50000000
-rl.AddRange(Range{Start: start, End: end})
-}
-
-// This should complete very quickly
-count := rl.CountTotalValid()
-
-// Each range has ~50M numbers, all non-overlapping = 500 * 50M = 25 billion
-expected := 500 * 50000001
-if count != expected {
-t.Errorf("Expected %d, got %d", expected, count)
-}
+	rl := &RangeList{}
+	
+	// Add 500 ranges in the hundred trillions
+	for i := 0; i < 500; i++ {
+		start := int64(100000000000000 + int64(i)*2000000000000)
+		end := start + 50000000
+		rl.AddRange(Range{Start: start, End: end})
+	}
+	
+	// This should complete very quickly
+	count := rl.CountTotalValid()
+	
+	// Each range has ~50M numbers, all non-overlapping = 500 * 50M = 25 billion
+	var expected int64 = 500 * 50000001
+	if count != expected {
+		t.Errorf("Expected %d, got %d", expected, count)
+	}
 }
 
 func BenchmarkCountTotalValid500Ranges(b *testing.B) {
-rl := &RangeList{}
-
-// Add 500 ranges in the hundred trillions with some overlaps
-for i := 0; i < 500; i++ {
-start := int(100000000000000 + int64(i)*1500000000000)
-end := start + 2000000000
-rl.AddRange(Range{Start: start, End: end})
-}
-
-b.ResetTimer()
-for i := 0; i < b.N; i++ {
-rl.CountTotalValid()
-}
+	rl := &RangeList{}
+	
+	// Add 500 ranges in the hundred trillions with some overlaps
+	for i := 0; i < 500; i++ {
+		start := int64(100000000000000 + int64(i)*1500000000000)
+		end := start + 2000000000
+		rl.AddRange(Range{Start: start, End: end})
+	}
+	
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		rl.CountTotalValid()
+	}
 }
 
 func BenchmarkValidate500Ranges(b *testing.B) {
-rl := &RangeList{}
-
-for i := 0; i < 500; i++ {
-start := int(100000000000000 + int64(i)*2000000000000)
-end := start + 50000000
-rl.AddRange(Range{Start: start, End: end})
+	rl := &RangeList{}
+	
+	for i := 0; i < 500; i++ {
+		start := int64(100000000000000 + int64(i)*2000000000000)
+		end := start + 50000000
+		rl.AddRange(Range{Start: start, End: end})
+	}
+	
+	testNum := int64(100000000000000 + 25000000)
+	
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		rl.IsValid(testNum)
+	}
 }
 
-testNum := 100000000000000 + 25000000
-
-b.ResetTimer()
-for i := 0; i < b.N; i++ {
-rl.IsValid(testNum)
-}
+func BenchmarkCountTotalValidQuadrillions(b *testing.B) {
+	rl := &RangeList{}
+	
+	// Add ranges from billions to quadrillions
+	for i := 0; i < 500; i++ {
+		start := int64(1000000000 + int64(i)*3000000000)
+		end := start + 999000000000000 // ~1 quadrillion range
+		rl.AddRange(Range{Start: start, End: end})
+	}
+	
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		rl.CountTotalValid()
+	}
 }
