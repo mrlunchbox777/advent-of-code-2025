@@ -27,6 +27,7 @@ The solution uses Go structs and methods:
 - Y axis: rows from bottom (1) to top (height)
 - Position [1,1] is the bottom-left corner
 - Example for a 3x3 grid:
+
   ```
   [1,3] [2,3] [3,3]  <- top row (Y=3)
   [1,2] [2,2] [3,2]  <- middle row (Y=2)
@@ -40,17 +41,20 @@ go run main.go processor.go <filepath> <mode>
 ```
 
 Where `<mode>` is either:
+
 - `initial`: Single pass - find all '@' positions with < 4 adjacent '@' symbols
 - `completion`: Iterative passes - repeatedly find and remove '@' positions until none remain
 
 ### Examples
 
 Initial mode (single pass):
+
 ```bash
 go run main.go processor.go example-data.txt initial
 ```
 
 Completion mode (multiple rounds):
+
 ```bash
 go run main.go processor.go example-data.txt completion
 ```
@@ -64,17 +68,20 @@ Performs a single pass through the grid and reports all '@' positions with fewer
 ### Completion Mode
 
 Iteratively processes the grid until no more '@' symbols can be removed:
+
 1. Find all '@' positions with < 4 adjacent '@' symbols
 2. Replace those positions with '.'
 3. Repeat until no positions are selected
 
 For each round, the mode prints:
+
 - Round number
 - Selected positions for that round
 - Count for the round
 - Running total
 
 At the end, it prints:
+
 - All selected positions across all rounds
 - Total number of rounds
 - Final total count
@@ -82,11 +89,13 @@ At the end, it prints:
 ## Testing
 
 Run tests with:
+
 ```bash
 go test -v
 ```
 
 The test suite includes:
+
 - `TestCountAdjacentAt`: Verifies neighbor counting logic
 - `TestFindSelectedPositions`: Tests selection logic on a small grid
 - `TestExampleData`: Validates the example data produces 13 selections (initial mode)
@@ -97,7 +106,9 @@ The test suite includes:
 ## Example Output
 
 ### Initial Mode
+
 For the provided example-data.txt:
+
 ```
 Selected positions:
 [1,1]
@@ -118,7 +129,9 @@ Total count: 13
 ```
 
 ### Completion Mode
+
 For the provided example-data.txt (9 rounds, 43 total):
+
 ```
 Round 1:
 Selected positions:
@@ -176,4 +189,3 @@ Result: The AI successfully created the app with the correct logic and tests. Th
 > add a second mandatory flag that will determine if it will check for an initial pass or attempt as many passes as it can. The initial pass is the current state of the app. The completion mode will run the initial pass, then create a new grid with those positions replaced with '.', then it will attempt to run again. Once it can't replace any more '@'s it is complete. As it goes it will print the "round" it is on, the positions selections for the round, the total from the round, and the running total of all rounds. At the end it will print all positions, the number of rounds, and the final total. For reference the example-data.txt should produce a final total of 43.
 
 Result: The AI correctly implemented both modes with proper iteration logic. The completion mode produces 43 total selections across 9 rounds as expected. The `ReplacePositions` method creates new grids preserving immutability, and comprehensive tests validate both modes.
-
