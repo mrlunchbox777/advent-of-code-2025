@@ -34,6 +34,16 @@ func (rl *RangeList) IsValid(n int) bool {
 	return false
 }
 
+func (rl *RangeList) CountTotalValid() int {
+	validSet := make(map[int]bool)
+	for _, r := range rl.Ranges {
+		for i := r.Start; i <= r.End; i++ {
+			validSet[i] = true
+		}
+	}
+	return len(validSet)
+}
+
 type NumberList struct {
 	Numbers []int
 }
@@ -71,12 +81,22 @@ func parseRange(line string) (Range, error) {
 }
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %s <path-to-file>\n", os.Args[0])
+	if len(os.Args) != 3 {
+		fmt.Fprintf(os.Stderr, "Usage: %s <path-to-file> <mode>\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Modes:\n")
+		fmt.Fprintf(os.Stderr, "  validate - Count valid numbers from second list\n")
+		fmt.Fprintf(os.Stderr, "  total    - Count total possible valid numbers from ranges\n")
 		os.Exit(1)
 	}
 
 	filePath := os.Args[1]
+	mode := os.Args[2]
+	
+	if mode != "validate" && mode != "total" {
+		fmt.Fprintf(os.Stderr, "Invalid mode: %s\n", mode)
+		fmt.Fprintf(os.Stderr, "Valid modes are: validate, total\n")
+		os.Exit(1)
+	}
 	file, err := os.Open(filePath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error opening file: %v\n", err)
@@ -120,7 +140,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	count := numberList.ValidateAgainstRanges(rangeList)
-	
-	fmt.Printf("\nTotal valid numbers: %d\n", count)
+	if mode == "validate" {
+		count := numberList.ValidateAgainstRanges(rangeList)
+		fmt.Printf("\nTotal valid numbers: %d\n", count)
+	} else {
+		count := rangeList.CountTotalValid()
+		fmt.Printf("Total possible valid numbers: %d\n", count)
+	}
 }

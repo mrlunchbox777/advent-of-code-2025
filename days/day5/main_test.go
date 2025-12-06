@@ -70,6 +70,21 @@ func TestNumberListValidateAgainstRanges(t *testing.T) {
 	}
 }
 
+func TestRangeListCountTotalValid(t *testing.T) {
+	rl := &RangeList{}
+	rl.AddRange(Range{Start: 3, End: 5})    // 3, 4, 5 = 3 numbers
+	rl.AddRange(Range{Start: 10, End: 14})  // 10, 11, 12, 13, 14 = 5 numbers
+	rl.AddRange(Range{Start: 16, End: 20})  // 16, 17, 18, 19, 20 = 5 numbers
+	rl.AddRange(Range{Start: 12, End: 18})  // 12, 13, 14 already counted, adds 15, 16, 17, 18 = 1 new (15)
+	
+	count := rl.CountTotalValid()
+	
+	// 3,4,5,10,11,12,13,14,15,16,17,18,19,20 = 14 unique numbers
+	if count != 14 {
+		t.Errorf("Expected 14 total possible valid numbers, got %d", count)
+	}
+}
+
 func TestParseRange(t *testing.T) {
 	tests := []struct {
 		input       string

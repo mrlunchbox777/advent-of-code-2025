@@ -20,13 +20,26 @@ go build -o validator
 ## Usage
 
 ```bash
-./validator <path-to-file>
+./validator <path-to-file> <mode>
 ```
 
-### Example
+### Modes
+
+- **validate** - Count valid numbers from the second list against the ranges
+- **total** - Count total possible valid numbers across all ranges
+
+### Examples
+
+Validate mode (count valid numbers from second list):
 
 ```bash
-./validator example-data.txt
+./validator example-data.txt validate
+```
+
+Total mode (count total possible valid numbers in ranges):
+
+```bash
+./validator example-data.txt total
 ```
 
 ## Input Format
@@ -47,6 +60,8 @@ go build -o validator
 
 ## Output
 
+### Validate Mode
+
 The program prints each number with its validation status:
 
 ```
@@ -59,6 +74,22 @@ The program prints each number with its validation status:
 
 Total valid numbers: 3
 ```
+
+### Total Mode
+
+The program prints the total count of possible valid numbers:
+
+```
+Total possible valid numbers: 14
+```
+
+This counts unique numbers across all ranges:
+
+- 3-5: 3, 4, 5 (3 numbers)
+- 10-14: 10, 11, 12, 13, 14 (5 numbers)
+- 16-20: 16, 17, 18, 19, 20 (5 numbers)
+- 12-18: Adds only 15 (1 new number, others overlap)
+- Total: 14 unique numbers
 
 ## Testing
 
@@ -80,17 +111,21 @@ go test -v
 
 - `Range.Contains(n int) bool`: Check if a number is within the range
 - `RangeList.IsValid(n int) bool`: Check if a number is valid against any range
+- `RangeList.CountTotalValid() int`: Count total unique numbers across all ranges
 - `NumberList.ValidateAgainstRanges(rangeList *RangeList) int`: Validate numbers and return count
 
 ### Performance
 
-The application uses range-based validation instead of building a complete set, making it efficient for ranges in the billions. Each number is checked against the ranges in O(n) time where n is the number of ranges, avoiding memory issues from materializing billion-element sets.
+**Validate mode** uses range-based validation instead of building a complete set, making it efficient for ranges in the billions. Each number is checked against the ranges in O(r) per number, where r = number of ranges, avoiding memory issues from materializing billion-element sets.
+
+**Total mode** builds a set to count unique numbers, so it's only efficient when ranges are reasonably sized. For very large ranges (billions), this mode will require significant memory and time.
 
 ## Thoughts On AI Solutions
 
 1. The AI correctly understood the problem requirements and provided a solution that counts valid numbers based on given ranges. I changed editors and runners, from VSCode to LazyVim, and everything seems to have worked fine. I can't tell if there was any corruption this time because it gave less output. It did seem to stall part way through and I had to cancel and then ask it to continue, but it picked up where it left off without issue and completed the solution.
 1. I attempted the puzzle input, but the AI generated a solution that was far too slow. I asked it to optimize for performance, and it produced a much better solution that checked each number against the ranges directly instead of building a massive set of valid numbers. This worked well and completed in a reasonable time.
 1. I attempted the solution again, it ran basically instantly, and it gave the correct answer.
+1. The AI updated the program to add the second mode, and it seemed fine for the example input.
 
 - I did not give the AI the exact instructions from Advent of Code, but rather paraphrased them with my understanding of the problem.
 - ~~I did not ask the AI to optimize for performance or efficiency.~~
@@ -106,4 +141,4 @@ The application uses range-based validation instead of building a complete set, 
 
 #### Part 2
 
-todo
+add a second mandatory parameter that will either count the valid numbers in the second list as before, or will count the total possible valid numbers in the ranges from the first list. For example, with the same input as before, the total possible valid numbers would be 3-5 (3), 10-14 (5), 16-20 (5), and 12-18 (1) for a total of 14 possible valid numbers. Update tests and readme accordingly.
