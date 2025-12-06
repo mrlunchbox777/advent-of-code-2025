@@ -243,3 +243,19 @@ func BenchmarkCountTotalValidQuadrillions(b *testing.B) {
 		rl.CountTotalValid()
 	}
 }
+
+func BenchmarkCountTotalValidHundredsOfQuadrillions(b *testing.B) {
+rl := &RangeList{}
+
+// Add ranges from billions to hundreds of quadrillions
+for i := 0; i < 500; i++ {
+start := int64(1000000000 + int64(i)*100000000)
+end := start + 500000000000000000 // 500 quadrillion range
+rl.AddRange(Range{Start: start, End: end})
+}
+
+b.ResetTimer()
+for i := 0; i < b.N; i++ {
+rl.CountTotalValid()
+}
+}
