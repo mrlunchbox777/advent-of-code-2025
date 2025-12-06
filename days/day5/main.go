@@ -25,14 +25,13 @@ func (rl *RangeList) AddRange(r Range) {
 	rl.Ranges = append(rl.Ranges, r)
 }
 
-func (rl *RangeList) BuildValidSet() map[int]bool {
-	validSet := make(map[int]bool)
+func (rl *RangeList) IsValid(n int) bool {
 	for _, r := range rl.Ranges {
-		for i := r.Start; i <= r.End; i++ {
-			validSet[i] = true
+		if r.Contains(n) {
+			return true
 		}
 	}
-	return validSet
+	return false
 }
 
 type NumberList struct {
@@ -43,10 +42,10 @@ func (nl *NumberList) AddNumber(n int) {
 	nl.Numbers = append(nl.Numbers, n)
 }
 
-func (nl *NumberList) ValidateAgainstSet(validSet map[int]bool) int {
+func (nl *NumberList) ValidateAgainstRanges(rangeList *RangeList) int {
 	count := 0
 	for _, num := range nl.Numbers {
-		valid := validSet[num]
+		valid := rangeList.IsValid(num)
 		fmt.Printf("%d: %t\n", num, valid)
 		if valid {
 			count++
@@ -121,8 +120,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	validSet := rangeList.BuildValidSet()
-	count := numberList.ValidateAgainstSet(validSet)
+	count := numberList.ValidateAgainstRanges(rangeList)
 	
 	fmt.Printf("\nTotal valid numbers: %d\n", count)
 }

@@ -79,12 +79,18 @@ go test -v
 ### Methods
 
 - `Range.Contains(n int) bool`: Check if a number is within the range
-- `RangeList.BuildValidSet() map[int]bool`: Build a set of all valid numbers from ranges
-- `NumberList.ValidateAgainstSet(validSet map[int]bool) int`: Validate numbers and return count
+- `RangeList.IsValid(n int) bool`: Check if a number is valid against any range
+- `NumberList.ValidateAgainstRanges(rangeList *RangeList) int`: Validate numbers and return count
+
+### Performance
+
+The application uses range-based validation instead of building a complete set, making it efficient for ranges in the billions. Each number is checked against the ranges in O(n) time where n is the number of ranges, avoiding memory issues from materializing billion-element sets.
 
 ## Thoughts On AI Solutions
 
 1. The AI correctly understood the problem requirements and provided a solution that counts valid numbers based on given ranges. I changed editors and runners, from VSCode to LazyVim, and everything seems to have worked fine. I can't tell if there was any corruption this time because it gave less output. It did seem to stall part way through and I had to cancel and then ask it to continue, but it picked up where it left off without issue and completed the solution.
+1. I attempted the puzzle input, but the AI generated a solution that was far too slow. I asked it to optimize for performance, and it produced a much better solution that checked each number against the ranges directly instead of building a massive set of valid numbers. This worked well and completed in a reasonable time.
+1. I attempted the solution again, it ran basically instantly, and it gave the correct answer.
 
 - I did not give the AI the exact instructions from Advent of Code, but rather paraphrased them with my understanding of the problem.
 - I did not ask the AI to optimize for performance or efficiency.
