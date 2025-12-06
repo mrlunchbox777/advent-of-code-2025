@@ -138,7 +138,7 @@ go test -v
 1. I tested the second mode with the puzzle input, and it was far too slow again. I asked it to optimize for performance, and it produced a solution that merged ranges and calculated counts mathematically instead of materializing all valid numbers. This worked well and completed in a reasonable time for the test data it self-generated, but was still too slow for the puzzle-input.
 1. I asked it to optimize considering the highs and lows were in the hundreds of trillions, and it produced a solution that used quicksort to sort ranges and then merged them efficiently. This worked well and completed in a reasonable time for the data it generated, but it was still to slow for the puzzle input. I think i gave it bad data for the lows.
 1. I asked it to optimize further for lows in the billions and highs in the quadrillions and it was still too slow for the puzzle input.
-1. I tested it with the puzzle input, but realized I may have been doing bad testing for some of the previous iterations and will need to go back and re-test those to be sure.
+1. I tested it with the puzzle input, but realized I may have been doing bad testing for some of the previous iterations and will need to go back and re-test those to be sure. It is getting the correct answer.
 
 - I did not give the AI the exact instructions from Advent of Code, but rather paraphrased them with my understanding of the problem.
 - ~~I did not ask the AI to optimize for performance or efficiency.~~
