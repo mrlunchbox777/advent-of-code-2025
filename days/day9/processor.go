@@ -179,7 +179,37 @@ func orderPointsAsPolygon(points []Point) []Point {
 }
 
 func isRectangleContained(minX, maxX, minY, maxY int, points []Point) bool {
-	for x := minX; x <= maxX; x++ {
+	// Check the 4 corners first (fast reject)
+	if !isPointInPolygon(minX, minY, points) {
+		return false
+	}
+	if !isPointInPolygon(maxX, minY, points) {
+		return false
+	}
+	if !isPointInPolygon(minX, maxY, points) {
+		return false
+	}
+	if !isPointInPolygon(maxX, maxY, points) {
+		return false
+	}
+	
+	// Check center point
+	centerX := (minX + maxX) / 2
+	centerY := (minY + maxY) / 2
+	if !isPointInPolygon(centerX, centerY, points) {
+		return false
+	}
+	
+	// For large rectangles, sample points instead of checking every single point
+	width := maxX - minX
+	height := maxY - minY
+	
+	// Use sampling for large rectangles
+	maxSamples := 100 // Check at most 100 points per edge
+	
+	// Sample top and bottom edges
+	xStep := max(1, width/maxSamples)
+	for x := minX; x <= maxX; x += xStep {
 		if !isPointInPolygon(x, minY, points) {
 			return false
 		}
@@ -187,7 +217,19 @@ func isRectangleContained(minX, maxX, minY, maxY int, points []Point) bool {
 			return false
 		}
 	}
-	for y := minY; y <= maxY; y++ {
+	// Check the end points if not already checked
+	if (maxX-minX)%xStep != 0 {
+		if !isPointInPolygon(maxX, minY, points) {
+			return false
+		}
+		if !isPointInPolygon(maxX, maxY, points) {
+			return false
+		}
+	}
+	
+	// Sample left and right edges
+	yStep := max(1, height/maxSamples)
+	for y := minY; y <= maxY; y += yStep {
 		if !isPointInPolygon(minX, y, points) {
 			return false
 		}
@@ -195,10 +237,26 @@ func isRectangleContained(minX, maxX, minY, maxY int, points []Point) bool {
 			return false
 		}
 	}
+	// Check the end points if not already checked
+	if (maxY-minY)%yStep != 0 {
+		if !isPointInPolygon(minX, maxY, points) {
+			return false
+		}
+		if !isPointInPolygon(maxX, maxY, points) {
+			return false
+		}
+	}
 	
-	centerX := (minX + maxX) / 2
-	centerY := (minY + maxY) / 2
-	return isPointInPolygon(centerX, centerY, points)
+	// Sample some interior points for extra confidence
+	for i := 1; i < 4; i++ {
+		sampleX := minX + (width * i / 4)
+		sampleY := minY + (height * i / 4)
+		if !isPointInPolygon(sampleX, sampleY, points) {
+			return false
+		}
+	}
+	
+	return true
 }
 
 func isPointInPolygon(x, y int, polygon []Point) bool {

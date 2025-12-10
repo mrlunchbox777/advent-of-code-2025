@@ -132,6 +132,24 @@ func TestProcessCoordinatesSimpleContained(t *testing.T) {
 	}
 }
 
+func TestLargeGridPerformance(t *testing.T) {
+	// Test that we can handle very large grids efficiently
+	lines := []string{
+		"0,0",
+		"100000,0",
+		"100000,100000",
+		"0,100000",
+	}
+
+	maxArea := processCoordinates(lines, "contained")
+	// 100000x100000 grid should give (100000+1)*(100000+1)
+	expected := 10000200001
+	if maxArea != expected {
+		t.Fatalf("unexpected max area for large grid: got %d want %d", maxArea, expected)
+	}
+	t.Logf("Successfully processed 100000x100000 grid")
+}
+
 func splitLines(s string) []string {
 	var out []string
 	cur := ""

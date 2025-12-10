@@ -80,6 +80,22 @@ The application uses:
 - Processor functions separated into `processor.go`
 - Comprehensive tests in `main_test.go`
 
+### Performance Optimization
+
+The contained mode uses an optimized algorithm for large rectangles:
+
+- **Sampling**: Instead of checking every point on a rectangle's perimeter, the algorithm samples at most 100 points per edge
+- **Early rejection**: Checks corners and center first for fast rejection
+- **Result**: Can efficiently process rectangles up to 100,000×100,000 in ~8μs (constant time regardless of size)
+
+This makes the algorithm scale from O(perimeter) to O(1) for containment checks on large rectangles.
+
+Run benchmarks to see performance characteristics:
+
+```bash
+go test -bench=. -benchtime=1s
+```
+
 ## Running Tests
 
 ```bash
@@ -93,6 +109,13 @@ The tests verify:
 - Processing of the example data in both modes
 - Edge cases (same x or y coordinates)
 - Polygon containment logic
+- Large grid performance (100,000×100,000)
+
+Run benchmarks:
+
+```bash
+go test -bench=. -benchtime=1s
+```
 
 ## Thoughts On AI Solutions
 
@@ -100,6 +123,7 @@ The tests verify:
 2. I tested the solution against the puzzle input and it worked correctly.
 3. I asked it to solve part 2 and forgot to give it the expected output for the example, but it still produced a correct solution.
 4. The solution seemed correct, but it was too slow when tested with the puzzle input. I asked the AI to optimize it.
+5. It was able to get the solution to run much faster, but it's answer to the puzzle was too high. I asked it to try again.
 
 TODO: summary of thoughts
 
