@@ -119,7 +119,8 @@ func processContainedWithResult(points []Point) (int, Rectangle) {
 		return 0, Rectangle{}
 	}
 
-	orderedPoints := orderPointsAsPolygon(points)
+	// Use points in original order - they form a polygon by connecting sequentially
+	orderedPoints := points
 
 	maxArea := 0
 	var maxRect Rectangle

@@ -71,8 +71,8 @@ func drawVisualization(lines []string, rect Rectangle, outputFile string) error 
 		svgWidth, svgHeight, minX, minY, width, height)
 	fmt.Fprintf(f, "  <rect width=\"100%%\" height=\"100%%\" fill=\"white\"/>\n")
 
-	// Draw polygon
-	orderedPoints := orderPointsAsPolygon(points)
+	// Draw polygon - use original order from file
+	orderedPoints := points
 	fmt.Fprintf(f, "  <polygon points=\"")
 	for i, p := range orderedPoints {
 		if i > 0 {
