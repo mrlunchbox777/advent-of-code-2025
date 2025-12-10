@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestProcessExampleData(t *testing.T) {
+func TestProcessExampleDataOriginal(t *testing.T) {
 	p := filepath.Join(".", "example-data.txt")
 	b, err := os.ReadFile(p)
 	if err != nil {
@@ -18,12 +18,32 @@ func TestProcessExampleData(t *testing.T) {
 		lines = append(lines, l)
 	}
 
-	maxArea := processCoordinates(lines)
+	maxArea := processCoordinates(lines, "original")
 
 	expected := 50
 	if maxArea != expected {
 		t.Fatalf("unexpected max area: got %d want %d", maxArea, expected)
 	}
+}
+
+func TestProcessExampleDataContained(t *testing.T) {
+	p := filepath.Join(".", "example-data.txt")
+	b, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatalf("failed to read example data: %v", err)
+	}
+
+	var lines []string
+	for _, l := range splitLines(string(b)) {
+		lines = append(lines, l)
+	}
+
+	maxArea := processCoordinates(lines, "contained")
+
+	if maxArea <= 0 {
+		t.Fatalf("expected positive area for contained mode, got %d", maxArea)
+	}
+	t.Logf("Contained mode area: %d", maxArea)
 }
 
 func TestParsePoint(t *testing.T) {
@@ -80,16 +100,33 @@ func TestRectangleArea(t *testing.T) {
 	}
 }
 
-func TestProcessCoordinatesSimple(t *testing.T) {
+func TestProcessCoordinatesSimpleOriginal(t *testing.T) {
 	lines := []string{
 		"0,0",
 		"5,10",
 		"1,1",
 	}
 
-	maxArea := processCoordinates(lines)
+	maxArea := processCoordinates(lines, "original")
 	// (0,0) to (5,10) = (5-0+1)*(10-0+1) = 6*11 = 66
 	expected := 66
+	if maxArea != expected {
+		t.Fatalf("unexpected max area: got %d want %d", maxArea, expected)
+	}
+}
+
+func TestProcessCoordinatesSimpleContained(t *testing.T) {
+	lines := []string{
+		"0,0",
+		"10,0",
+		"10,10",
+		"0,10",
+	}
+
+	maxArea := processCoordinates(lines, "contained")
+	// Square polygon, largest rectangle should be the full square
+	// (0,0) to (10,10) = 11*11 = 121
+	expected := 121
 	if maxArea != expected {
 		t.Fatalf("unexpected max area: got %d want %d", maxArea, expected)
 	}
