@@ -371,10 +371,11 @@ func runCompletionMode(coords []*Coordinate) {
 		}
 		
 		round++
-		cs.Connect(idx1, idx2)
 		
 		root1 := cs.uf.Find(idx1)
 		root2 := cs.uf.Find(idx2)
+		cs.Connect(idx1, idx2)
+		
 		if root1 != root2 {
 			numGroups--
 		}

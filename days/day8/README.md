@@ -205,8 +205,10 @@ The test suite includes:
 4. When I asked for the completion mode, it initially misunderstood and thought I wanted to connect all coordinates into a single group as fast as possible, rather than running until all coordinates were connected. By giving the expected output for the example data with the initial prompt, it quickly adjusted without intervention and produced the correct solution.
 5. I tried running the completion mode on the puzzle input, but it took too long. I suspect this is due to the exponential growth of connections as more coordinates are connected. I asked the AI to optimize for performance.
 6. I had to reset the session of the AI, unrelated to the project. I tried running the AI's solution to optimize completion, but now it can't find the correct solution to the example data. I gave it the expected output again and asked it to try again.
+7. I attempted to run the AI solution on the puzzle input again, and it finished quickly, but got a result that was too low. I let it know and asked it to try again.
+8. I attempted one more time and it got the correct answer.
 
-TODO: add summary of thoughts
+Today I was reminded how important it is to understand the problem fully before asking an AI to solve it. Once I clarified part 1, the AI easily got the correct solution. In part 2, I saw the same issue, but it self-corrected because I gave it the example data and expected output. Optimization was a part of part 2, and when I asked for it and I think it solved the optimization correctly, but I had to reset the session and it lost the context and it's solution was broken. After giving it a correct example again, it was able to solve it. Again, test and validation with known data is key to getting the right solution.
 
 - I did not give the AI the exact instructions from Advent of Code, but rather paraphrased them with my understanding of the problem.
 - I did not ask the AI to optimize for performance or efficiency.
