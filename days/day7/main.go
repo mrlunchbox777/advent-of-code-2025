@@ -157,10 +157,17 @@ func (g *Grid) CountPaths() int {
 		return 0
 	}
 	
-	return g.countPathsFrom(start.Row, start.Col)
+	memo := make(map[Position]int)
+	return g.countPathsFrom(start.Row, start.Col, memo)
 }
 
-func (g *Grid) countPathsFrom(row, col int) int {
+func (g *Grid) countPathsFrom(row, col int, memo map[Position]int) int {
+	pos := Position{Row: row, Col: col}
+	
+	if cached, exists := memo[pos]; exists {
+		return cached
+	}
+	
 	nextRow := row + 1
 	
 	if nextRow >= g.Height {
@@ -169,14 +176,14 @@ func (g *Grid) countPathsFrom(row, col int) int {
 	
 	nextCell := g.Get(Position{Row: nextRow, Col: col})
 	
+	var result int
+	
 	if nextCell == Split {
-		paths := 0
-		
 		leftCol := col - 1
 		if leftCol >= 0 {
 			leftCell := g.Get(Position{Row: nextRow, Col: leftCol})
 			if leftCell == Empty || leftCell == Split {
-				paths += g.countPathsFrom(nextRow, leftCol)
+				result += g.countPathsFrom(nextRow, leftCol, memo)
 			}
 		}
 		
@@ -184,16 +191,15 @@ func (g *Grid) countPathsFrom(row, col int) int {
 		if rightCol < g.Width {
 			rightCell := g.Get(Position{Row: nextRow, Col: rightCol})
 			if rightCell == Empty || rightCell == Split {
-				paths += g.countPathsFrom(nextRow, rightCol)
+				result += g.countPathsFrom(nextRow, rightCol, memo)
 			}
 		}
-		
-		return paths
 	} else if nextCell == Empty || nextCell == Split {
-		return g.countPathsFrom(nextRow, col)
+		result = g.countPathsFrom(nextRow, col, memo)
 	}
 	
-	return 0
+	memo[pos] = result
+	return result
 }
 
 func parseFile(filepath string) (*Grid, error) {

@@ -133,7 +133,8 @@ The application uses:
 ### Paths Mode Algorithm
 
 1. Find the start position `S`
-2. Recursively count paths from that position:
+2. Recursively count paths from that position using memoization:
+   - Check memoization cache for previously computed position
    - If the next row is beyond the grid, return 1 (reached bottom)
    - If the next cell is a split (`^`):
      - Recursively count paths from left column (if in bounds)
@@ -141,7 +142,10 @@ The application uses:
      - Return the sum of both paths
    - If the next cell is empty (`.`) or another split:
      - Recursively count paths continuing straight down
+   - Cache the result for this position
 3. Return the total count of all paths
+
+**Performance**: The algorithm uses memoization to cache results for each position, making it very efficient for grids up to 150x150 with typical split patterns. Performance is O(rows × cols) in the best case where paths converge. For pathological cases with exponential path growth (every split diverges completely), the algorithm will take longer as it must count 2^(split_levels) unique paths.
 
 ## Testing
 
@@ -165,12 +169,13 @@ The test suite includes:
 1. The AI understood the problem, found a solution, and validated it against the example data fairly quickly after a few iterations. I had to retry the initial prompt because I provided the wrong example data initially (forgot to save).
 2. I realized I forgot to ask it to count the number of times it split, and asked it to do that. It did with ease.
 3. I tested the solution against the puzzle input data and it worked perfectly the first time.
-4. I asked it to implement part 2, it did so correctly, but it was too slow for the puzzle input, so I had to ask it to optimize it.
+4. I asked it to implement part 2, it did so correctly, but it was too slow for the puzzle input, so I had to ask it to optimize it. It did that, but it had issues where it tried to over optimize and caused itself to hang. After the first restart it started using `timeout` to avoid that, but it still ended up hanging a few times.
+5. I attempted it with the puzzle input again, and it got it correctly.
 
-TODO: add summary of thoughts
+Part 1 seemed like it would take the AI longer, but it was incredibly fast and did it on the first attempt (after I gave it the correct example data). Part 2 was more intense because it was doing exponential growth and had to be optimized, but it handled that well after the first attempt at optimization. Interestingly it didn't realize that it could cause a hung operation until I pointed it out, then it attempted to account for that, but still sometimes failed.
 
 - I did not give the AI the exact instructions from Advent of Code, but rather paraphrased them with my understanding of the problem.
-- I did not ask the AI to optimize for performance or efficiency.
+- ~~I did not ask the AI to optimize for performance or efficiency.~~
 - I did not provide any starter code or templates; the AI generated the entire solution from scratch.
 - I did not intervene in the coding process except to provide prompts and clarifications as needed.
 - I only updated this section of the README for this day.
@@ -183,4 +188,4 @@ TODO: add summary of thoughts
 
 #### Part 2
 
-Add a second mandatory parameter to the app that either selects the counts splits mode, existing logic, or counts paths mode. In this mode it should count the number of paths a beam could take from S to the bottom of the grid, splitting at each split. It should output that number when complete instead of the grid processing output. For reference processing, the @days/day7/example-data-1.txt should result in 40 paths.
+> Add a second mandatory parameter to the app that either selects the counts splits mode, existing logic, or counts paths mode. In this mode it should count the number of paths a beam could take from S to the bottom of the grid, splitting at each split. It should output that number when complete instead of the grid processing output. For reference processing, the @days/day7/example-data-1.txt should result in 40 paths.
