@@ -66,6 +66,11 @@ func parsePoint(line string) (Point, error) {
 }
 
 func processCoordinates(lines []string, mode string) int {
+	area, _ := processCoordinatesWithResult(lines, mode)
+	return area
+}
+
+func processCoordinatesWithResult(lines []string, mode string) (int, Rectangle) {
 	var points []Point
 	for _, line := range lines {
 		if p, err := parsePoint(line); err == nil {
@@ -74,37 +79,50 @@ func processCoordinates(lines []string, mode string) int {
 	}
 
 	if len(points) < 2 {
-		return 0
+		return 0, Rectangle{}
 	}
 
 	if mode == "original" {
-		return processOriginal(points)
+		return processOriginalWithResult(points)
 	}
-	return processContained(points)
+	return processContainedWithResult(points)
 }
 
 func processOriginal(points []Point) int {
+	area, _ := processOriginalWithResult(points)
+	return area
+}
+
+func processOriginalWithResult(points []Point) (int, Rectangle) {
 	maxArea := 0
+	var maxRect Rectangle
 	for i := 0; i < len(points); i++ {
 		for j := i + 1; j < len(points); j++ {
 			rect := NewRectangle(points[i], points[j])
 			area := rect.Area()
 			if area > maxArea {
 				maxArea = area
+				maxRect = rect
 			}
 		}
 	}
-	return maxArea
+	return maxArea, maxRect
 }
 
 func processContained(points []Point) int {
+	area, _ := processContainedWithResult(points)
+	return area
+}
+
+func processContainedWithResult(points []Point) (int, Rectangle) {
 	if len(points) < 3 {
-		return 0
+		return 0, Rectangle{}
 	}
 
 	orderedPoints := orderPointsAsPolygon(points)
 
 	maxArea := 0
+	var maxRect Rectangle
 	for i := 0; i < len(points); i++ {
 		for j := i + 1; j < len(points); j++ {
 			p1, p2 := points[i], points[j]
@@ -121,11 +139,12 @@ func processContained(points []Point) int {
 				area := rect.Area()
 				if area > maxArea {
 					maxArea = area
+					maxRect = rect
 				}
 			}
 		}
 	}
-	return maxArea
+	return maxArea, maxRect
 }
 
 func orderPointsAsPolygon(points []Point) []Point {

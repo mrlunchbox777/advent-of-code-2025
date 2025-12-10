@@ -69,6 +69,28 @@ go run . example-data.txt original
 
 go run . example-data.txt contained
 # Output: Largest rectangle area: 24
+
+go run . example-data.txt contained output.svg
+# Output: Largest rectangle area: 24
+#         Visualization saved to: output.svg
+```
+
+### Visualization
+
+When using `contained` mode with an output file, the program generates an SVG visualization:
+
+- **Light blue polygon**: The shape formed by connecting all input coordinates
+- **Red rectangle**: The largest contained rectangle
+- **Dark blue dots**: Input coordinate points
+- **Red dots**: Rectangle corners
+
+The visualization automatically scales to fit the data and includes the calculated area as a label.
+
+Example visualizations can be generated with:
+
+```bash
+go run . example-data.txt contained example-contained.svg
+go run . puzzle-input.txt contained puzzle-contained.svg
 ```
 
 ## Implementation
@@ -78,6 +100,7 @@ The application uses:
 - `Point` struct to represent 2D coordinates
 - `Rectangle` struct with methods to calculate area
 - Processor functions separated into `processor.go`
+- Visualization functions in `visualizer.go` (SVG generation)
 - Comprehensive tests in `main_test.go`
 
 ### Performance Optimization
@@ -126,6 +149,7 @@ go test -bench=. -benchtime=1s
 5. It was able to get the solution to run much faster, but it's answer to the puzzle was too high (even though the example-data.txt test was correct). I asked it to try again.
 6. That answer was still too hight, tried again.
 7. Even with better example data it gave the same answer, I must have given bad instructions, trying again.
+8. I had it create a visualization to help debug, but it looks fine, like a square in a circle basically. I reviewed the original question and I think the way it's worded it might not want it to have any of the original points in the rectangle other than the corners. Asked it to update the code to reflect that.
 
 TODO: summary of thoughts
 

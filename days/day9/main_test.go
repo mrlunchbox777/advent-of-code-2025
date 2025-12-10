@@ -150,6 +150,40 @@ func TestLargeGridPerformance(t *testing.T) {
 	t.Logf("Successfully processed 100000x100000 grid")
 }
 
+func TestVisualization(t *testing.T) {
+	lines := []string{
+		"0,0",
+		"10,0",
+		"10,10",
+		"0,10",
+	}
+
+	rect := Rectangle{P1: Point{0, 0}, P2: Point{10, 10}}
+	
+	// Create temp file
+	tmpFile := "test_viz.svg"
+	defer func() {
+		// Clean up
+		_ = os.Remove(tmpFile)
+	}()
+
+	err := drawVisualization(lines, rect, tmpFile)
+	if err != nil {
+		t.Fatalf("failed to create visualization: %v", err)
+	}
+
+	// Verify file was created and has content
+	info, err := os.Stat(tmpFile)
+	if err != nil {
+		t.Fatalf("visualization file not created: %v", err)
+	}
+	if info.Size() == 0 {
+		t.Fatal("visualization file is empty")
+	}
+	
+	t.Logf("Successfully created visualization (%d bytes)", info.Size())
+}
+
 func splitLines(s string) []string {
 	var out []string
 	cur := ""
