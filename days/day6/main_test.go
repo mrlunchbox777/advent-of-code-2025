@@ -74,7 +74,7 @@ func TestGridCalculateTotal(t *testing.T) {
 	}
 }
 
-func TestParseFile(t *testing.T) {
+func TestParseFileOriginalMode(t *testing.T) {
 	content := `123 328  51 64 
  45 64  387 23 
   6 98  215 314
@@ -93,7 +93,7 @@ func TestParseFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	grid, err := parseFile(tmpfile.Name())
+	grid, err := parseFile(tmpfile.Name(), "original")
 	if err != nil {
 		t.Fatalf("parseFile() error = %v", err)
 	}
@@ -109,14 +109,49 @@ func TestParseFile(t *testing.T) {
 	}
 }
 
-func TestParseFileWithExampleData(t *testing.T) {
+func TestParseFileAlignedMode(t *testing.T) {
+	content := `123 328  51 64 
+ 45 64  387 23 
+  6 98  215 314
+*   +   *   +  
+`
+	tmpfile, err := os.CreateTemp("", "test-*.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpfile.Name())
+
+	if _, err := tmpfile.Write([]byte(content)); err != nil {
+		t.Fatal(err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	grid, err := parseFile(tmpfile.Name(), "aligned")
+	if err != nil {
+		t.Fatalf("parseFile() error = %v", err)
+	}
+
+	if len(grid.Columns) != 4 {
+		t.Errorf("Expected 4 columns, got %d", len(grid.Columns))
+	}
+
+	expectedTotal := 3263827
+	result := grid.CalculateTotal()
+	if result != expectedTotal {
+		t.Errorf("Total = %d, want %d", result, expectedTotal)
+	}
+}
+
+func TestParseFileWithExampleDataOriginal(t *testing.T) {
 	examplePath := filepath.Join(".", "example-data.txt")
 	
 	if _, err := os.Stat(examplePath); os.IsNotExist(err) {
 		t.Skip("example-data.txt not found")
 	}
 
-	grid, err := parseFile(examplePath)
+	grid, err := parseFile(examplePath, "original")
 	if err != nil {
 		t.Fatalf("parseFile() error = %v", err)
 	}
@@ -124,6 +159,25 @@ func TestParseFileWithExampleData(t *testing.T) {
 	expectedTotal := 4277556
 	result := grid.CalculateTotal()
 	if result != expectedTotal {
-		t.Errorf("Total from example-data.txt = %d, want %d", result, expectedTotal)
+		t.Errorf("Total from example-data.txt in original mode = %d, want %d", result, expectedTotal)
+	}
+}
+
+func TestParseFileWithExampleDataAligned(t *testing.T) {
+	examplePath := filepath.Join(".", "example-data.txt")
+	
+	if _, err := os.Stat(examplePath); os.IsNotExist(err) {
+		t.Skip("example-data.txt not found")
+	}
+
+	grid, err := parseFile(examplePath, "aligned")
+	if err != nil {
+		t.Fatalf("parseFile() error = %v", err)
+	}
+
+	expectedTotal := 3263827
+	result := grid.CalculateTotal()
+	if result != expectedTotal {
+		t.Errorf("Total from example-data.txt in aligned mode = %d, want %d", result, expectedTotal)
 	}
 }
