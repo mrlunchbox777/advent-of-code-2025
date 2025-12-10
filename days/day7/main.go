@@ -94,11 +94,12 @@ func (g *Grid) ProcessBeams() int {
 	}
 	
 	round := 0
+	totalSplits := 0
 	activeBeams := []Position{{Row: start.Row, Col: start.Col}}
 	
 	for len(activeBeams) > 0 {
 		round++
-		fmt.Printf("\n=== Round %d ===\n", round)
+		roundSplits := 0
 		
 		var nextBeams []Position
 		
@@ -113,6 +114,7 @@ func (g *Grid) ProcessBeams() int {
 			targetCell := g.Get(nextPos)
 			
 			if targetCell == Split {
+				roundSplits++
 				leftCol := beam.Col - 1
 				rightCol := beam.Col + 1
 				
@@ -137,6 +139,11 @@ func (g *Grid) ProcessBeams() int {
 			}
 		}
 		
+		totalSplits += roundSplits
+		
+		fmt.Printf("\n=== Round %d ===\n", round)
+		fmt.Printf("Splits this round: %d\n", roundSplits)
+		fmt.Printf("Total splits: %d\n", totalSplits)
 		activeBeams = nextBeams
 		g.Print()
 	}

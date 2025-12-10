@@ -50,7 +50,10 @@ Example:
 The application prints:
 
 - The initial state of the grid
-- Each round showing the grid after beam placement
+- Each round showing:
+  - The number of splits that occurred in that round
+  - The running total of splits across all rounds
+  - The grid after beam placement
 - A completion message with the total number of rounds
 
 Example output:
@@ -63,12 +66,16 @@ Example output:
 ...............
 
 === Round 1 ===
+Splits this round: 0
+Total splits: 0
 .......S.......
 .......|.......
 .......^.......
 ...............
 
 === Round 2 ===
+Splits this round: 1
+Total splits: 1
 .......S.......
 .......|.......
 ......|^|......
@@ -125,6 +132,7 @@ The test suite includes:
 
 1. The AI understood the problem, found a solution, and validated it against the example data fairly quickly after a few iterations. I had to retry the initial prompt because I provided the wrong example data initially (forgot to save).
 2. I realized I forgot to ask it to count the number of times it split, and asked it to do that. It did with ease.
+3. I tested the solution against the puzzle input data and it worked perfectly the first time.
 
 TODO: add summary of thoughts
 
