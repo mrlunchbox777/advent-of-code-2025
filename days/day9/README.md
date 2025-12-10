@@ -41,7 +41,8 @@ The area calculation uses **inclusive counting**: a rectangle from (2,3) to (7,5
 The points are treated as vertices of a polygon (ordered by angle from centroid). The program finds the largest axis-aligned rectangle that:
 
 1. Uses two of the input coordinates as opposite corners
-2. Is completely contained within the polygon (all edges and interior points must be inside or on the boundary)
+2. Is completely contained within the polygon (all edges and interior must be inside or on the polygon boundary)
+3. Has no other coordinate points strictly inside the rectangle (points on the rectangle's boundary edges are allowed)
 
 The program processes all pairs of points and outputs the maximum area found based on the selected mode.
 
@@ -150,6 +151,7 @@ go test -bench=. -benchtime=1s
 6. That answer was still too hight, tried again.
 7. Even with better example data it gave the same answer, I must have given bad instructions, trying again.
 8. I had it create a visualization to help debug, but it looks fine, like a square in a circle basically. I reviewed the original question and I think the way it's worded it might not want it to have any of the original points in the rectangle other than the corners. Asked it to update the code to reflect that.
+9. It's still giving the same answer (4629432496), it has also been throwing errors on the svg generation/parsing. Asked it to consider that my instructions might be wrong and to try again.
 
 TODO: summary of thoughts
 

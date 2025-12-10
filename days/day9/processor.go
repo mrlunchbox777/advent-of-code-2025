@@ -134,17 +134,42 @@ func processContainedWithResult(points []Point) (int, Rectangle) {
 			minX, maxX := min(p1.X, p2.X), max(p1.X, p2.X)
 			minY, maxY := min(p1.Y, p2.Y), max(p1.Y, p2.Y)
 
-			if isRectangleContained(minX, maxX, minY, maxY, orderedPoints) {
-				rect := NewRectangle(p1, p2)
-				area := rect.Area()
-				if area > maxArea {
-					maxArea = area
-					maxRect = rect
-				}
+			// Check if rectangle is contained in polygon
+			if !isRectangleContained(minX, maxX, minY, maxY, orderedPoints) {
+				continue
+			}
+			
+			// Check if any other points fall inside the rectangle (excluding corners)
+			if hasPointsInside(minX, maxX, minY, maxY, points, p1, p2) {
+				continue
+			}
+
+			rect := NewRectangle(p1, p2)
+			area := rect.Area()
+			if area > maxArea {
+				maxArea = area
+				maxRect = rect
 			}
 		}
 	}
 	return maxArea, maxRect
+}
+
+func hasPointsInside(minX, maxX, minY, maxY int, points []Point, corner1, corner2 Point) bool {
+	// Check if any points (other than the two corners) fall STRICTLY inside the rectangle
+	// Points on the boundary (edges) are allowed
+	for _, p := range points {
+		// Skip the corner points
+		if (p.X == corner1.X && p.Y == corner1.Y) || (p.X == corner2.X && p.Y == corner2.Y) {
+			continue
+		}
+		
+		// Check if point is strictly inside (not on boundary)
+		if p.X > minX && p.X < maxX && p.Y > minY && p.Y < maxY {
+			return true
+		}
+	}
+	return false
 }
 
 func orderPointsAsPolygon(points []Point) []Point {
