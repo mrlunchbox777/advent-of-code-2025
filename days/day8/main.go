@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"container/heap"
 	"fmt"
 	"math"
 	"os"
@@ -43,12 +44,12 @@ func (uf *UnionFind) Find(x int) int {
 	return uf.parent[x]
 }
 
-func (uf *UnionFind) Union(x, y int) {
+func (uf *UnionFind) Union(x, y int) bool {
 	rootX := uf.Find(x)
 	rootY := uf.Find(y)
 	
 	if rootX == rootY {
-		return
+		return false
 	}
 	
 	if uf.rank[rootX] < uf.rank[rootY] {
@@ -59,12 +60,48 @@ func (uf *UnionFind) Union(x, y int) {
 		uf.parent[rootY] = rootX
 		uf.rank[rootX]++
 	}
+	return true
+}
+
+type Edge struct {
+	idx1, idx2 int
+	distance   float64
+	index      int
+}
+
+type EdgeHeap []*Edge
+
+func (h EdgeHeap) Len() int           { return len(h) }
+func (h EdgeHeap) Less(i, j int) bool { return h[i].distance < h[j].distance }
+func (h EdgeHeap) Swap(i, j int) {
+	h[i], h[j] = h[j], h[i]
+	h[i].index = i
+	h[j].index = j
+}
+
+func (h *EdgeHeap) Push(x interface{}) {
+	n := len(*h)
+	edge := x.(*Edge)
+	edge.index = n
+	*h = append(*h, edge)
+}
+
+func (h *EdgeHeap) Pop() interface{} {
+	old := *h
+	n := len(old)
+	edge := old[n-1]
+	old[n-1] = nil
+	edge.index = -1
+	*h = old[0 : n-1]
+	return edge
 }
 
 type CoordinateSet struct {
 	coords      []*Coordinate
 	uf          *UnionFind
 	connections map[string]bool
+	edgeHeap    *EdgeHeap
+	useHeap     bool
 }
 
 func NewCoordinateSet(coords []*Coordinate) *CoordinateSet {
@@ -72,7 +109,34 @@ func NewCoordinateSet(coords []*Coordinate) *CoordinateSet {
 		coords:      coords,
 		uf:          NewUnionFind(len(coords)),
 		connections: make(map[string]bool),
+		useHeap:     false,
 	}
+}
+
+func NewCoordinateSetWithHeap(coords []*Coordinate) *CoordinateSet {
+	cs := &CoordinateSet{
+		coords:      coords,
+		uf:          NewUnionFind(len(coords)),
+		connections: make(map[string]bool),
+		useHeap:     true,
+	}
+	
+	h := make(EdgeHeap, 0)
+	heap.Init(&h)
+	
+	for i := 0; i < len(coords); i++ {
+		for j := i + 1; j < len(coords); j++ {
+			dist := coords[i].Distance(coords[j])
+			heap.Push(&h, &Edge{
+				idx1:     i,
+				idx2:     j,
+				distance: dist,
+			})
+		}
+	}
+	
+	cs.edgeHeap = &h
+	return cs
 }
 
 func (cs *CoordinateSet) connectionKey(idx1, idx2 int) string {
@@ -87,6 +151,16 @@ func (cs *CoordinateSet) hasConnection(idx1, idx2 int) bool {
 }
 
 func (cs *CoordinateSet) FindClosestPair() (int, int, float64) {
+	if cs.useHeap {
+		for cs.edgeHeap.Len() > 0 {
+			edge := heap.Pop(cs.edgeHeap).(*Edge)
+			if !cs.hasConnection(edge.idx1, edge.idx2) {
+				return edge.idx1, edge.idx2, edge.distance
+			}
+		}
+		return -1, -1, 0
+	}
+	
 	minDist := math.MaxFloat64
 	idx1, idx2 := -1, -1
 	
@@ -190,16 +264,23 @@ func parseFile(filepath string) ([]*Coordinate, error) {
 }
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: day8 <filepath> [max_rounds]")
+	if len(os.Args) < 3 {
+		fmt.Println("Usage: day8 <mode> <filepath> [max_rounds]")
+		fmt.Println("  mode: 'grouping' or 'completion'")
 		os.Exit(1)
 	}
 	
-	filepath := os.Args[1]
+	mode := os.Args[1]
+	filepath := os.Args[2]
 	maxRounds := 1000
 	
-	if len(os.Args) >= 3 {
-		rounds, err := strconv.Atoi(os.Args[2])
+	if mode != "grouping" && mode != "completion" {
+		fmt.Fprintf(os.Stderr, "Invalid mode: %s (must be 'grouping' or 'completion')\n", mode)
+		os.Exit(1)
+	}
+	
+	if len(os.Args) >= 4 {
+		rounds, err := strconv.Atoi(os.Args[3])
 		if err == nil && rounds > 0 {
 			maxRounds = rounds
 		}
@@ -216,6 +297,14 @@ func main() {
 		os.Exit(1)
 	}
 	
+	if mode == "grouping" {
+		runGroupingMode(coords, maxRounds)
+	} else {
+		runCompletionMode(coords)
+	}
+}
+
+func runGroupingMode(coords []*Coordinate, maxRounds int) {
 	fmt.Printf("Loaded %d coordinates\n", len(coords))
 	fmt.Printf("Running up to %d rounds\n\n", maxRounds)
 	
@@ -259,4 +348,74 @@ func main() {
 	}
 	
 	fmt.Printf("\nProduct of top 3 group sizes: %d\n", product)
+}
+
+func runCompletionMode(coords []*Coordinate) {
+	fmt.Printf("Loaded %d coordinates\n", len(coords))
+	fmt.Println("Running until all coordinates are in a single group")
+	fmt.Println()
+	
+	cs := NewCoordinateSetWithHeap(coords)
+	round := 0
+	var completionIdx1, completionIdx2 int
+	var completionRound int
+	
+	numGroups := len(coords)
+	
+	for {
+		idx1, idx2, dist := cs.FindClosestPair()
+		
+		if idx1 == -1 || idx2 == -1 {
+			fmt.Printf("\nAll possible connections made after %d rounds\n", round)
+			break
+		}
+		
+		round++
+		cs.Connect(idx1, idx2)
+		
+		root1 := cs.uf.Find(idx1)
+		root2 := cs.uf.Find(idx2)
+		if root1 != root2 {
+			numGroups--
+		}
+		
+		if round <= 100 || round%1000 == 0 {
+			fmt.Printf("Round %d: Connected (%d,%d,%d) and (%d,%d,%d) - Distance: %.2f\n",
+				round,
+				coords[idx1].X, coords[idx1].Y, coords[idx1].Z,
+				coords[idx2].X, coords[idx2].Y, coords[idx2].Z,
+				dist)
+			
+			topGroups := cs.GetTopGroups(5)
+			fmt.Printf("  Top 5 groups: ")
+			for i, group := range topGroups {
+				if i > 0 {
+					fmt.Print(", ")
+				}
+				fmt.Printf("%d", len(group))
+			}
+			fmt.Printf(" (%d total groups)\n", numGroups)
+		}
+		
+		if numGroups == 1 && completionRound == 0 {
+			completionIdx1 = idx1
+			completionIdx2 = idx2
+			completionRound = round
+			fmt.Printf("*** All coordinates now in a single group at round %d! ***\n", round)
+		}
+	}
+	
+	fmt.Println("\n=== Final Results ===")
+	if completionRound > 0 {
+		fmt.Printf("Single group achieved at round %d\n", completionRound)
+		fmt.Printf("Completion connection: (%d,%d,%d) and (%d,%d,%d)\n",
+			coords[completionIdx1].X, coords[completionIdx1].Y, coords[completionIdx1].Z,
+			coords[completionIdx2].X, coords[completionIdx2].Y, coords[completionIdx2].Z)
+		
+		product := coords[completionIdx1].X * coords[completionIdx2].X
+		fmt.Printf("Product of X coordinates: %d × %d = %d\n",
+			coords[completionIdx1].X, coords[completionIdx2].X, product)
+	} else {
+		fmt.Println("Did not reach single group")
+	}
 }

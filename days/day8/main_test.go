@@ -152,7 +152,7 @@ func TestParseFile(t *testing.T) {
 	}
 }
 
-func TestExampleData(t *testing.T) {
+func TestExampleDataGrouping(t *testing.T) {
 	if _, err := os.Stat("example-data.txt"); os.IsNotExist(err) {
 		t.Skip("example-data.txt not found")
 	}
@@ -188,4 +188,49 @@ func TestExampleData(t *testing.T) {
 	
 	t.Logf("After 10 rounds: group sizes are %d, %d, %d (product=%d)",
 		len(top3[0]), len(top3[1]), len(top3[2]), product)
+}
+
+func TestExampleDataCompletion(t *testing.T) {
+	if _, err := os.Stat("example-data.txt"); os.IsNotExist(err) {
+		t.Skip("example-data.txt not found")
+	}
+	
+	coords, err := parseFile("example-data.txt")
+	if err != nil {
+		t.Fatalf("Failed to parse example-data.txt: %v", err)
+	}
+	
+	cs := NewCoordinateSet(coords)
+	var completionIdx1, completionIdx2 int
+	
+	for round := 1; ; round++ {
+		idx1, idx2, _ := cs.FindClosestPair()
+		if idx1 == -1 || idx2 == -1 {
+			break
+		}
+		
+		cs.Connect(idx1, idx2)
+		
+		groups := cs.GetGroups()
+		if len(groups) == 1 && completionIdx1 == 0 {
+			completionIdx1 = idx1
+			completionIdx2 = idx2
+			break
+		}
+	}
+	
+	if completionIdx1 == 0 {
+		t.Fatal("Never reached single group")
+	}
+	
+	product := coords[completionIdx1].X * coords[completionIdx2].X
+	expected := 25272
+	
+	if product != expected {
+		t.Errorf("Product = %d, want %d (X coords: %d, %d)",
+			product, expected, coords[completionIdx1].X, coords[completionIdx2].X)
+	}
+	
+	t.Logf("Completion connection X coords: %d × %d = %d",
+		coords[completionIdx1].X, coords[completionIdx2].X, product)
 }

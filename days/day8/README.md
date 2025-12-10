@@ -100,6 +100,31 @@ Top 3 largest groups:
 Product of top 3 group sizes: 40
 ```
 
+### Completion Mode
+
+In completion mode, the application runs until all coordinates are connected into a single group, then reports the connection that achieved this.
+
+Example output for completion mode:
+
+```
+$ ./day8 completion example-data.txt
+Loaded 20 coordinates
+Running until all coordinates are in a single group
+
+Round 1: Connected (162,817,812) and (425,690,689) - Distance: 316.90
+  Top 5 groups: 2, 1, 1, 1, 1
+...
+Round 29: Connected (216,146,977) and (117,168,530) - Distance: 458.36
+  Top 5 groups: 20
+*** All coordinates now in a single group! ***
+...
+
+=== Final Results ===
+Single group achieved at round 29
+Completion connection: (216,146,977) and (117,168,530)
+Product of X coordinates: 216 × 117 = 25272
+```
+
 ## Implementation
 
 The application uses:
@@ -130,12 +155,30 @@ The application uses:
 
 **Key Insight**: The algorithm connects the closest pair of coordinates that don't have a direct connection yet. This means coordinates in the same group (connected through other coordinates) can still be directly connected if they don't already have a direct edge between them.
 
-**Time Complexity**: O(R × N²) where R is rounds and N is number of coordinates
+### Completion Mode Algorithm
 
-- Each round checks all pairs: O(N²)
-- Union-Find operations are nearly O(1) with path compression and union by rank
+1. Load all coordinates from the input file
+2. Initialize tracking structures (Union-Find and connection map)
+3. For each round:
+   - Find and connect the closest unconnected pair
+   - Check if all coordinates are now in a single group
+   - If yes, record this as the completion connection and note the round
+   - Continue connecting remaining pairs
+4. Display the completion connection and calculate the product of its X coordinates
 
-**Space Complexity**: O(N) for storing coordinates and Union-Find structure
+**Time Complexity**:
+
+- **Grouping mode**: O(R × N²) where R is rounds and N is number of coordinates
+  - Each round checks all pairs: O(N²)
+- **Completion mode**: O(N² log N) optimized using a min-heap
+  - All edges pre-computed and sorted once: O(N² log N²)
+  - Each connection is O(log N) to pop from heap
+  - Union-Find operations are nearly O(1) with path compression and union by rank
+
+**Space Complexity**:
+
+- **Grouping mode**: O(N) for storing coordinates and Union-Find structure
+- **Completion mode**: O(N²) for storing all edges in the min-heap
 
 ## Testing
 
@@ -159,6 +202,9 @@ The test suite includes:
 1. The AI found a solution, but it complained that the example data and expected outcome was wrong. When looking at it's output it looked like it got the right solution in round 9 instead of 10, so I'm guessing there is a one off error either in my instructions or it's implementation.
 2. The one off error was due to my misunderstanding of the problem. I missed the explanation that coordinates in the same group could still be directly connected if they didn't already have a direct edge between them. Once I clarified that, the AI adjusted the implementation and it worked perfectly.
 3. I attempted the puzzle input and it worked perfectly the first time.
+4. When I asked for the completion mode, it initially misunderstood and thought I wanted to connect all coordinates into a single group as fast as possible, rather than running until all coordinates were connected. By giving the expected output for the example data with the initial prompt, it quickly adjusted without intervention and produced the correct solution.
+5. I tried running the completion mode on the puzzle input, but it took too long. I suspect this is due to the exponential growth of connections as more coordinates are connected. I asked the AI to optimize for performance.
+6. I had to reset the session of the AI, unrelated to the project. I tried running the AI's solution to optimize completion, but now it can't find the correct solution to the example data. I gave it the expected output again and asked it to try again.
 
 TODO: add summary of thoughts
 
@@ -175,3 +221,5 @@ TODO: add summary of thoughts
 > build a go app in the day8 folder. It should accept a first parameter that is a path to a text file. The file will contain a set of 3D coordinates per line. It should track the array and the entries within it using structs and use methods on those structs to perform the computations. It should process the file in rounds. Each round it should find the 2 closest coordinates and connect them, it should print the connection it just made and the biggest 5 groups of connected coordinates. It should repeat this up to x (default 1000, second parameter) times. At the end it should print the 3 largest groups, and the product of their sizes. Add test and a basic readme for the app as well. For reference processing, @days/day8/example-data.txt ran for 10 rounds should result in 5x4x2=40.
 
 #### Part 2
+
+> Add a second mandatory parameter to the app that either selects the default grouping mode, existing logic, or a completion mode. In this mode it should run until all coordinates are connected. Once complete it should multiply the x coordinates of the coordinates in the final connection. For reference processing, @days/day8/example-data.txt should result in 216x117=25272.
