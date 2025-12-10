@@ -123,7 +123,9 @@ go test -bench=. -benchtime=1s
 2. I tested the solution against the puzzle input and it worked correctly.
 3. I asked it to solve part 2 and forgot to give it the expected output for the example, but it still produced a correct solution.
 4. The solution seemed correct, but it was too slow when tested with the puzzle input. I asked the AI to optimize it.
-5. It was able to get the solution to run much faster, but it's answer to the puzzle was too high. I asked it to try again.
+5. It was able to get the solution to run much faster, but it's answer to the puzzle was too high (even though the example-data.txt test was correct). I asked it to try again.
+6. That answer was still too hight, tried again.
+7. Even with better example data it gave the same answer, I must have given bad instructions, trying again.
 
 TODO: summary of thoughts
 

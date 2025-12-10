@@ -193,70 +193,125 @@ func isRectangleContained(minX, maxX, minY, maxY int, points []Point) bool {
 		return false
 	}
 	
-	// Check center point
+	// Key insight: For a rectangle to be contained, NO polygon edge can intersect
+	// the rectangle's EDGES (unless it's coincident with them)
+	// This ensures no part of the rectangle extends outside the polygon
+	
+	rectEdges := []struct{ x1, y1, x2, y2 int }{
+		{minX, minY, maxX, minY}, // top
+		{minX, maxY, maxX, maxY}, // bottom
+		{minX, minY, minX, maxY}, // left
+		{maxX, minY, maxX, maxY}, // right
+	}
+	
+	for i := 0; i < len(points); i++ {
+		p1 := points[i]
+		p2 := points[(i+1)%len(points)]
+		
+		// For each polygon edge, check if it properly intersects any rectangle edge
+		for _, re := range rectEdges {
+			if properSegmentIntersection(p1.X, p1.Y, p2.X, p2.Y, re.x1, re.y1, re.x2, re.y2) {
+				// This polygon edge crosses a rectangle edge - rectangle not contained
+				return false
+			}
+		}
+	}
+	
+	// Check center point - if corners are in and no edges intersect, center must be in
 	centerX := (minX + maxX) / 2
 	centerY := (minY + maxY) / 2
-	if !isPointInPolygon(centerX, centerY, points) {
-		return false
+	return isPointInPolygon(centerX, centerY, points)
+}
+
+func edgeCrossesRectangle(x1, y1, x2, y2, minX, maxX, minY, maxY int) bool {
+	// Check if line segment crosses through the rectangle interior
+	// This is different from touching or lying along the boundary
+	
+	// Count how many rectangle edges this segment properly crosses
+	crossCount := 0
+	
+	// Check intersection with each rectangle edge
+	// We only count proper crossings (not endpoint touches)
+	edges := []struct{ x1, y1, x2, y2 int }{
+		{minX, minY, maxX, minY}, // top
+		{minX, maxY, maxX, maxY}, // bottom
+		{minX, minY, minX, maxY}, // left
+		{maxX, minY, maxX, maxY}, // right
 	}
 	
-	// For large rectangles, sample points instead of checking every single point
-	width := maxX - minX
-	height := maxY - minY
-	
-	// Use sampling for large rectangles
-	maxSamples := 100 // Check at most 100 points per edge
-	
-	// Sample top and bottom edges
-	xStep := max(1, width/maxSamples)
-	for x := minX; x <= maxX; x += xStep {
-		if !isPointInPolygon(x, minY, points) {
-			return false
-		}
-		if !isPointInPolygon(x, maxY, points) {
-			return false
-		}
-	}
-	// Check the end points if not already checked
-	if (maxX-minX)%xStep != 0 {
-		if !isPointInPolygon(maxX, minY, points) {
-			return false
-		}
-		if !isPointInPolygon(maxX, maxY, points) {
-			return false
+	for _, edge := range edges {
+		if properSegmentIntersection(x1, y1, x2, y2, edge.x1, edge.y1, edge.x2, edge.y2) {
+			crossCount++
 		}
 	}
 	
-	// Sample left and right edges
-	yStep := max(1, height/maxSamples)
-	for y := minY; y <= maxY; y += yStep {
-		if !isPointInPolygon(minX, y, points) {
-			return false
-		}
-		if !isPointInPolygon(maxX, y, points) {
-			return false
-		}
-	}
-	// Check the end points if not already checked
-	if (maxY-minY)%yStep != 0 {
-		if !isPointInPolygon(minX, maxY, points) {
-			return false
-		}
-		if !isPointInPolygon(maxX, maxY, points) {
-			return false
-		}
+	// If segment crosses 2 opposite edges, it goes through the rectangle
+	return crossCount >= 2
+}
+
+func properSegmentIntersection(x1, y1, x2, y2, x3, y3, x4, y4 int) bool {
+	// Check for proper intersection (segments cross, not just touch at endpoints)
+	d1 := direction(x3, y3, x4, y4, x1, y1)
+	d2 := direction(x3, y3, x4, y4, x2, y2)
+	d3 := direction(x1, y1, x2, y2, x3, y3)
+	d4 := direction(x1, y1, x2, y2, x4, y4)
+	
+	// Proper intersection: segments cross
+	if ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
+		((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0)) {
+		return true
 	}
 	
-	// Sample some interior points for extra confidence
-	for i := 1; i < 4; i++ {
-		sampleX := minX + (width * i / 4)
-		sampleY := minY + (height * i / 4)
-		if !isPointInPolygon(sampleX, sampleY, points) {
-			return false
-		}
+	return false
+}
+
+func segmentsIntersect(x1, y1, x2, y2, x3, y3, x4, y4 int) bool {
+	// Check if line segment (x1,y1)-(x2,y2) intersects with segment (x3,y3)-(x4,y4)
+	// Using orientation method
+	
+	d1 := direction(x3, y3, x4, y4, x1, y1)
+	d2 := direction(x3, y3, x4, y4, x2, y2)
+	d3 := direction(x1, y1, x2, y2, x3, y3)
+	d4 := direction(x1, y1, x2, y2, x4, y4)
+	
+	if ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
+		((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0)) {
+		return true
 	}
 	
-	return true
+	// Check for collinear cases
+	if d1 == 0 && onSegment(x3, y3, x4, y4, x1, y1) {
+		return true
+	}
+	if d2 == 0 && onSegment(x3, y3, x4, y4, x2, y2) {
+		return true
+	}
+	if d3 == 0 && onSegment(x1, y1, x2, y2, x3, y3) {
+		return true
+	}
+	if d4 == 0 && onSegment(x1, y1, x2, y2, x4, y4) {
+		return true
+	}
+	
+	return false
+}
+
+func direction(x1, y1, x2, y2, x3, y3 int) int {
+	// Cross product to determine orientation
+	val := (y3-y1)*(x2-x1) - (x3-x1)*(y2-y1)
+	if val == 0 {
+		return 0 // Collinear
+	}
+	if val > 0 {
+		return 1 // Clockwise
+	}
+	return -1 // Counterclockwise
+}
+
+func onSegment(x1, y1, x2, y2, x3, y3 int) bool {
+	// Check if point (x3, y3) lies on segment (x1,y1)-(x2,y2) (assuming collinear)
+	return x3 >= min(x1, x2) && x3 <= max(x1, x2) &&
+		y3 >= min(y1, y2) && y3 <= max(y1, y2)
 }
 
 func isPointInPolygon(x, y int, polygon []Point) bool {
