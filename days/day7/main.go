@@ -151,6 +151,51 @@ func (g *Grid) ProcessBeams() int {
 	return round
 }
 
+func (g *Grid) CountPaths() int {
+	start := g.FindStart()
+	if start == nil {
+		return 0
+	}
+	
+	return g.countPathsFrom(start.Row, start.Col)
+}
+
+func (g *Grid) countPathsFrom(row, col int) int {
+	nextRow := row + 1
+	
+	if nextRow >= g.Height {
+		return 1
+	}
+	
+	nextCell := g.Get(Position{Row: nextRow, Col: col})
+	
+	if nextCell == Split {
+		paths := 0
+		
+		leftCol := col - 1
+		if leftCol >= 0 {
+			leftCell := g.Get(Position{Row: nextRow, Col: leftCol})
+			if leftCell == Empty || leftCell == Split {
+				paths += g.countPathsFrom(nextRow, leftCol)
+			}
+		}
+		
+		rightCol := col + 1
+		if rightCol < g.Width {
+			rightCell := g.Get(Position{Row: nextRow, Col: rightCol})
+			if rightCell == Empty || rightCell == Split {
+				paths += g.countPathsFrom(nextRow, rightCol)
+			}
+		}
+		
+		return paths
+	} else if nextCell == Empty || nextCell == Split {
+		return g.countPathsFrom(nextRow, col)
+	}
+	
+	return 0
+}
+
 func parseFile(filepath string) (*Grid, error) {
 	file, err := os.Open(filepath)
 	if err != nil {
@@ -174,12 +219,19 @@ func parseFile(filepath string) (*Grid, error) {
 }
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: day7 <filepath>")
+	if len(os.Args) < 3 {
+		fmt.Println("Usage: day7 <mode> <filepath>")
+		fmt.Println("  mode: 'splits' or 'paths'")
 		os.Exit(1)
 	}
 	
-	filepath := os.Args[1]
+	mode := os.Args[1]
+	filepath := os.Args[2]
+	
+	if mode != "splits" && mode != "paths" {
+		fmt.Fprintf(os.Stderr, "Invalid mode: %s (must be 'splits' or 'paths')\n", mode)
+		os.Exit(1)
+	}
 	
 	grid, err := parseFile(filepath)
 	if err != nil {
@@ -187,10 +239,15 @@ func main() {
 		os.Exit(1)
 	}
 	
-	fmt.Println("=== Initial State ===")
-	grid.Print()
-	
-	rounds := grid.ProcessBeams()
-	
-	fmt.Printf("\n=== Finished after %d rounds ===\n", rounds)
+	if mode == "splits" {
+		fmt.Println("=== Initial State ===")
+		grid.Print()
+		
+		rounds := grid.ProcessBeams()
+		
+		fmt.Printf("\n=== Finished after %d rounds ===\n", rounds)
+	} else {
+		paths := grid.CountPaths()
+		fmt.Printf("Total paths from S to bottom: %d\n", paths)
+	}
 }

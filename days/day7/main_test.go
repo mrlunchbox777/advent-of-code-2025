@@ -59,6 +59,13 @@ func TestSimpleBeamMovement(t *testing.T) {
 	}
 	
 	grid := NewGrid(lines)
+	
+	paths := grid.CountPaths()
+	if paths != 1 {
+		t.Errorf("Expected 1 path, got %d", paths)
+	}
+	
+	grid = NewGrid(lines)
 	grid.ProcessBeams()
 	
 	if grid.Cells[1][2] != Beam {
@@ -79,6 +86,13 @@ func TestBeamSplit(t *testing.T) {
 	}
 	
 	grid := NewGrid(lines)
+	
+	paths := grid.CountPaths()
+	if paths != 2 {
+		t.Errorf("Expected 2 paths, got %d", paths)
+	}
+	
+	grid = NewGrid(lines)
 	grid.ProcessBeams()
 	
 	if grid.Cells[1][2] != Beam {
@@ -108,6 +122,16 @@ func TestExampleData(t *testing.T) {
 	}
 	
 	grid, err := parseFile("example-data-1.txt")
+	if err != nil {
+		t.Fatalf("Failed to parse example-data-1.txt: %v", err)
+	}
+	
+	paths := grid.CountPaths()
+	if paths != 40 {
+		t.Errorf("Expected 40 paths, got %d", paths)
+	}
+	
+	grid, err = parseFile("example-data-1.txt")
 	if err != nil {
 		t.Fatalf("Failed to parse example-data-1.txt: %v", err)
 	}
@@ -148,6 +172,13 @@ func TestMultipleSplits(t *testing.T) {
 	}
 	
 	grid := NewGrid(lines)
+	
+	paths := grid.CountPaths()
+	if paths != 1 {
+		t.Errorf("Expected 1 path, got %d", paths)
+	}
+	
+	grid = NewGrid(lines)
 	grid.ProcessBeams()
 	
 	if grid.Cells[1][3] != Beam {
@@ -172,6 +203,13 @@ func TestEdgeSplit(t *testing.T) {
 	}
 	
 	grid := NewGrid(lines)
+	
+	paths := grid.CountPaths()
+	if paths != 1 {
+		t.Errorf("Expected 1 path (split at edge, only right side), got %d", paths)
+	}
+	
+	grid = NewGrid(lines)
 	grid.ProcessBeams()
 	
 	if grid.Cells[1][0] != Beam {
@@ -184,5 +222,55 @@ func TestEdgeSplit(t *testing.T) {
 	
 	if grid.Cells[3][1] != Beam {
 		t.Errorf("Expected beam at [3][1], got %c", grid.Cells[3][1])
+	}
+}
+
+func TestCountPathsSimple(t *testing.T) {
+	tests := []struct {
+		name     string
+		lines    []string
+		expected int
+	}{
+		{
+			name: "straight line",
+			lines: []string{
+				"S",
+				".",
+				".",
+			},
+			expected: 1,
+		},
+		{
+			name: "single split",
+			lines: []string{
+				"..S..",
+				".....",
+				"..^..",
+				".....",
+			},
+			expected: 2,
+		},
+		{
+			name: "double split - tree",
+			lines: []string{
+				"...S...",
+				".......",
+				"...^...",
+				".......",
+				"..^.^..",
+				".......",
+			},
+			expected: 4,
+		},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			grid := NewGrid(tt.lines)
+			paths := grid.CountPaths()
+			if paths != tt.expected {
+				t.Errorf("Expected %d paths, got %d", tt.expected, paths)
+			}
+		})
 	}
 }
