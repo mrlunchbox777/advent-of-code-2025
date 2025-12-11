@@ -199,34 +199,57 @@ func (m *Machine) Solve() ([]int, int) {
 	return nil, -1
 }
 
-// SolveCounter uses BFS with aggressive pruning and memory limits
+// State represents a search state for A*
+type State struct {
+	counts    []int
+	parent    *State
+	option    int // which option led to this state
+	cost      int // g(n): actual cost (path length)
+	heuristic int // h(n): estimated cost to goal
+}
+
+// SolveCounter uses A* search with Manhattan distance heuristic
 func (m *Machine) SolveCounter() ([]int, int) {
-	type State struct {
-		counts []int
-		path   []int
+	
+	initialCounts := make([]int, len(m.TargetCounts))
+	initialState := &State{
+		counts:    initialCounts,
+		parent:    nil,
+		option:    -1,
+		cost:      0,
+		heuristic: m.manhattanDistance(initialCounts),
 	}
 	
-	queue := []State{{counts: make([]int, len(m.TargetCounts)), path: []int{}}}
-	visited := make(map[string]struct{})
-	visited[countsKey(queue[0].counts)] = struct{}{}
+	// Priority queue (min-heap based on cost + heuristic)
+	pq := &PriorityQueue{}
+	pq.Push(initialState)
 	
-	// Limits to prevent memory explosion
-	maxQueueSize := 2000000
-	maxVisited := 1000000
+	// Use counts as int slices directly for faster comparison
+	visited := make(map[string]bool)
+	visited[countsKey(initialCounts)] = true
 	
-	for len(queue) > 0 {
-		current := queue[0]
-		queue = queue[1:]
+	statesExplored := 0
+	maxStates := 2000000 // Safety limit
+	
+	for pq.Len() > 0 {
+		current := pq.Pop()
 		
-		if CountsEqual(current.counts, m.TargetCounts) {
-			return current.path, len(current.path)
+		// Check if we reached the goal
+		if current.heuristic == 0 {
+			// Reconstruct path
+			path := []int{}
+			for node := current; node.parent != nil; node = node.parent {
+				path = append([]int{node.option}, path...)
+			}
+			return path, len(path)
 		}
 		
-		// Prune if queue or visited gets too large
-		if len(queue) > maxQueueSize || len(visited) > maxVisited {
-			continue
+		statesExplored++
+		if statesExplored > maxStates {
+			return nil, -1
 		}
 		
+		// Try each option
 		for i := range m.Options {
 			newCounts := m.ApplyOptionCounter(current.counts, i)
 			
@@ -242,16 +265,99 @@ func (m *Machine) SolveCounter() ([]int, int) {
 				continue
 			}
 			
-			key := countsKey(newCounts)
-			if _, seen := visited[key]; !seen {
-				visited[key] = struct{}{}
-				newPath := append(append([]int(nil), current.path...), i)
-				queue = append(queue, State{counts: newCounts, path: newPath})
+			newKey := countsKey(newCounts)
+			if !visited[newKey] {
+				visited[newKey] = true
+				newState := &State{
+					counts:    newCounts,
+					parent:    current,
+					option:    i,
+					cost:      current.cost + 1,
+					heuristic: m.manhattanDistance(newCounts),
+				}
+				pq.Push(newState)
 			}
 		}
 	}
 	
 	return nil, -1
+}
+
+// manhattanDistance calculates how far current counts are from target
+func (m *Machine) manhattanDistance(counts []int) int {
+	dist := 0
+	for i := range counts {
+		diff := m.TargetCounts[i] - counts[i]
+		if diff > 0 {
+			dist += diff
+		}
+	}
+	return dist
+}
+
+// PriorityQueue implements a min-heap for A* search
+type PriorityQueue struct {
+	items []*State
+}
+
+func (pq *PriorityQueue) Len() int {
+	return len(pq.items)
+}
+
+func (pq *PriorityQueue) Push(state *State) {
+	pq.items = append(pq.items, state)
+	pq.up(len(pq.items) - 1)
+}
+
+func (pq *PriorityQueue) Pop() *State {
+	n := len(pq.items)
+	pq.swap(0, n-1)
+	item := pq.items[n-1]
+	pq.items = pq.items[:n-1]
+	if len(pq.items) > 0 {
+		pq.down(0)
+	}
+	return item
+}
+
+func (pq *PriorityQueue) up(i int) {
+	for {
+		parent := (i - 1) / 2
+		if parent == i || pq.less(parent, i) {
+			break
+		}
+		pq.swap(parent, i)
+		i = parent
+	}
+}
+
+func (pq *PriorityQueue) down(i int) {
+	for {
+		left := 2*i + 1
+		if left >= len(pq.items) {
+			break
+		}
+		j := left
+		if right := left + 1; right < len(pq.items) && pq.less(right, left) {
+			j = right
+		}
+		if pq.less(i, j) {
+			break
+		}
+		pq.swap(i, j)
+		i = j
+	}
+}
+
+func (pq *PriorityQueue) less(i, j int) bool {
+	// Compare by f(n) = g(n) + h(n)
+	fi := pq.items[i].cost + pq.items[i].heuristic
+	fj := pq.items[j].cost + pq.items[j].heuristic
+	return fi < fj
+}
+
+func (pq *PriorityQueue) swap(i, j int) {
+	pq.items[i], pq.items[j] = pq.items[j], pq.items[i]
 }
 
 // stateKey creates a string key from a state for use in visited map
@@ -269,14 +375,8 @@ func stateKey(state []bool) string {
 
 // countsKey creates a string key from counts for use in visited map
 func countsKey(counts []int) string {
-	var sb strings.Builder
-	for i, c := range counts {
-		if i > 0 {
-			sb.WriteByte(',')
-		}
-		sb.WriteString(strconv.Itoa(c))
-	}
-	return sb.String()
+	// Use fmt.Sprintf for faster string creation
+	return fmt.Sprint(counts)
 }
 
 // ProcessLines processes all lines and returns results
