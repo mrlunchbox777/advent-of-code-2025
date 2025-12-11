@@ -87,6 +87,10 @@ The program uses Breadth-First Search (BFS) to find the shortest path from the i
 
 In toggle mode, BFS explores all possible toggle states until finding one matching the desired state. In counter mode, BFS explores all possible counter combinations until finding one matching the target counts.
 
+### Performance Note
+
+Counter mode with large target values (30+) has exponential search space complexity and may be slow or hit memory limits on some inputs. The implementation includes pruning (skipping states that exceed targets) and memory limits to prevent unbounded growth. Toggle mode is very fast even for large inputs.
+
 ## Implementation Details
 
 - **Machine struct**: Holds the desired state, target counts, and available options
@@ -102,11 +106,12 @@ In toggle mode, BFS explores all possible toggle states until finding one matchi
 1. The AI understood the requirements and generated a complete solution. I actually made a typo and said that line 1 should be 3 selections when it is actually 2, but the AI still produced correct logic. It did have to be interrupted and restarted once.
 2. I tested the solution against the puzzle input and it worked correctly.
 3. I asked it to solve part 2 and it seemed to find a working answer, but it was too slow when tested with the puzzle input. I asked the AI to optimize it.
+4. It immediately used both time and timeout, which is better than before. It iterated through greedy, bfs, memory caching, limiting that memory, back to greedy, more memory management, etc. Finally, it gave up and said that the problem is inherently exponential and may not be solvable for large inputs within reasonable time/memory constraints. The answer it gave was too high, so I asked it to try again.
 
 TODO: summary of thoughts
 
 - I did not give the AI the exact instructions from Advent of Code, but rather paraphrased them with my understanding of the problem.
-- I did not ask the AI to optimize for performance or efficiency.
+- ~~I did not ask the AI to optimize for performance or efficiency.~~
 - I did not provide any starter code or templates; the AI generated the entire solution from scratch.
 - I did not intervene in the coding process except to provide prompts and clarifications as needed.
 - I only updated this section of the README for this day.
@@ -122,4 +127,4 @@ TODO: summary of thoughts
 
 #### Part 2
 
-Add another mandatory parameter that chooses between toggle (current) mode and counter mode. In counter mode the section with square brackets is ignored and the curly brace section is used instead, each position represents the target number of toggles for each position. The goal is to reach exactly the number in the corresponding position in the curly brace section. The rest of the logic remains the same, find the minimum number of selections from the options to reach that goal. For reference processing, @days/day10/example-data.txt line 1 should be 10 selections, line 2 is also 12 selections, line 3 is 11, the total for the file is 33.
+> Add another mandatory parameter that chooses between toggle (current) mode and counter mode. In counter mode the section with square brackets is ignored and the curly brace section is used instead, each position represents the target number of toggles for each position. The goal is to reach exactly the number in the corresponding position in the curly brace section. The rest of the logic remains the same, find the minimum number of selections from the options to reach that goal. For reference processing, @days/day10/example-data.txt line 1 should be 10 selections, line 2 is also 12 selections, line 3 is 11, the total for the file is 33.

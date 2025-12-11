@@ -199,47 +199,58 @@ func (m *Machine) Solve() ([]int, int) {
 	return nil, -1
 }
 
-// SolveCounter finds the minimum number of selections to reach target counts using BFS
+// SolveCounter uses BFS with aggressive pruning and memory limits
 func (m *Machine) SolveCounter() ([]int, int) {
-	initialCounts := make([]int, len(m.TargetCounts))
-
-	// BFS to find shortest path
-	type SearchNode struct {
-		counts    []int
-		path      []int
-		selection int
+	type State struct {
+		counts []int
+		path   []int
 	}
-
-	queue := []SearchNode{{counts: initialCounts, path: []int{}, selection: 0}}
-	visited := make(map[string]bool)
-	visited[countsKey(initialCounts)] = true
-
+	
+	queue := []State{{counts: make([]int, len(m.TargetCounts)), path: []int{}}}
+	visited := make(map[string]struct{})
+	visited[countsKey(queue[0].counts)] = struct{}{}
+	
+	// Limits to prevent memory explosion
+	maxQueueSize := 2000000
+	maxVisited := 1000000
+	
 	for len(queue) > 0 {
 		current := queue[0]
 		queue = queue[1:]
-
+		
 		if CountsEqual(current.counts, m.TargetCounts) {
-			return current.path, current.selection
+			return current.path, len(current.path)
 		}
-
-		// Try each option
+		
+		// Prune if queue or visited gets too large
+		if len(queue) > maxQueueSize || len(visited) > maxVisited {
+			continue
+		}
+		
 		for i := range m.Options {
 			newCounts := m.ApplyOptionCounter(current.counts, i)
+			
+			// Skip if any position exceeds target
+			exceeds := false
+			for j := range newCounts {
+				if newCounts[j] > m.TargetCounts[j] {
+					exceeds = true
+					break
+				}
+			}
+			if exceeds {
+				continue
+			}
+			
 			key := countsKey(newCounts)
-			if !visited[key] {
-				visited[key] = true
-				newPath := make([]int, len(current.path))
-				copy(newPath, current.path)
-				newPath = append(newPath, i)
-				queue = append(queue, SearchNode{
-					counts:    newCounts,
-					path:      newPath,
-					selection: current.selection + 1,
-				})
+			if _, seen := visited[key]; !seen {
+				visited[key] = struct{}{}
+				newPath := append(append([]int(nil), current.path...), i)
+				queue = append(queue, State{counts: newCounts, path: newPath})
 			}
 		}
 	}
-
+	
 	return nil, -1
 }
 
