@@ -208,45 +208,31 @@ type State struct {
 	heuristic int // h(n): estimated cost to goal
 }
 
-// SolveCounter uses A* search with Manhattan distance heuristic
+// SolveCounter uses simple BFS with aggressive pruning
 func (m *Machine) SolveCounter() ([]int, int) {
-	
-	initialCounts := make([]int, len(m.TargetCounts))
-	initialState := &State{
-		counts:    initialCounts,
-		parent:    nil,
-		option:    -1,
-		cost:      0,
-		heuristic: m.manhattanDistance(initialCounts),
+	type QueueItem struct {
+		counts []int
+		path   []int
 	}
 	
-	// Priority queue (min-heap based on cost + heuristic)
-	pq := &PriorityQueue{}
-	pq.Push(initialState)
+	initialCounts := make([]int, len(m.TargetCounts))
+	queue := []QueueItem{{counts: initialCounts, path: []int{}}}
 	
-	// Use counts as int slices directly for faster comparison
-	visited := make(map[string]bool)
-	visited[countsKey(initialCounts)] = true
+	visited := make(map[string]struct{}, 100000)
+	visited[fmt.Sprint(initialCounts)] = struct{}{}
 	
-	statesExplored := 0
-	maxStates := 2000000 // Safety limit
+	maxVisited := 1000000
 	
-	for pq.Len() > 0 {
-		current := pq.Pop()
-		
-		// Check if we reached the goal
-		if current.heuristic == 0 {
-			// Reconstruct path
-			path := []int{}
-			for node := current; node.parent != nil; node = node.parent {
-				path = append([]int{node.option}, path...)
-			}
-			return path, len(path)
+	for len(queue) > 0 {
+		if len(visited) > maxVisited {
+			return nil, -1
 		}
 		
-		statesExplored++
-		if statesExplored > maxStates {
-			return nil, -1
+		current := queue[0]
+		queue = queue[1:]
+		
+		if CountsEqual(current.counts, m.TargetCounts) {
+			return current.path, len(current.path)
 		}
 		
 		// Try each option
@@ -254,28 +240,22 @@ func (m *Machine) SolveCounter() ([]int, int) {
 			newCounts := m.ApplyOptionCounter(current.counts, i)
 			
 			// Skip if any position exceeds target
-			exceeds := false
+			valid := true
 			for j := range newCounts {
 				if newCounts[j] > m.TargetCounts[j] {
-					exceeds = true
+					valid = false
 					break
 				}
 			}
-			if exceeds {
+			if !valid {
 				continue
 			}
 			
-			newKey := countsKey(newCounts)
-			if !visited[newKey] {
-				visited[newKey] = true
-				newState := &State{
-					counts:    newCounts,
-					parent:    current,
-					option:    i,
-					cost:      current.cost + 1,
-					heuristic: m.manhattanDistance(newCounts),
-				}
-				pq.Push(newState)
+			key := fmt.Sprint(newCounts)
+			if _, seen := visited[key]; !seen {
+				visited[key] = struct{}{}
+				newPath := append(append([]int(nil), current.path...), i)
+				queue = append(queue, QueueItem{counts: newCounts, path: newPath})
 			}
 		}
 	}

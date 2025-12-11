@@ -115,6 +115,7 @@ The example data solves quickly (~500ms), but some puzzle inputs with very large
 3. I asked it to solve part 2 and it seemed to find a working answer, but it was too slow when tested with the puzzle input. I asked the AI to optimize it.
 4. It immediately used both time and timeout, which is better than before. It iterated through greedy, bfs, memory caching, limiting that memory, back to greedy, more memory management, etc. Finally, it gave up and said that the problem is inherently exponential and may not be solvable for large inputs within reasonable time/memory constraints. The answer it gave was too high, so I asked it to try again.
 5. It attempted heuristic manhattan distance, heap based A\* approach, dropped the queue, added memorization, changed text encoding strategy, pooling and different data structures, debugged problem lines and finally gave up again. It was still too slow, but it left with possible strategies for further optimization.
+6. It tried bfs backwards greedy, beam search for faster queue, bfs without sorting, and gave up much faster this time. It's still too slow.
 
 TODO: summary of thoughts
 
