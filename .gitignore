@@ -34,4 +34,4 @@ go.work.sum
 # binaries and data
 days/day*/day*
 days/day*/puzzle-input.txt
-**/temptest/
+**/temptest*/

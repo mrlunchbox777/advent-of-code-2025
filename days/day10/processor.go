@@ -208,9 +208,14 @@ type State struct {
 	heuristic int // h(n): estimated cost to goal
 }
 
-// SolveCounter solves using optimized BFS
+// SolveCounter solves using Gaussian elimination first, then BFS fallback
 func (m *Machine) SolveCounter() ([]int, int) {
-	// Use BFS - it's actually faster for most cases
+	// Try Gaussian elimination approach first (fast for low free variables)
+	if path, count := m.solveCounterGaussian(); path != nil {
+		return path, count
+	}
+	
+	// Fallback to BFS for harder cases
 	return m.solveCounterBFS()
 }
 
@@ -354,7 +359,7 @@ func (m *Machine) searchFreeVars(aug [][]float64, pivotCols, freeVars []int, num
 		}
 	} else if len(freeVars) == 2 {
 		// Two free variables
-		maxV := 50 // Reduced bound for speed
+		maxV := 100 // Search bound
 		
 		for v0 := 0; v0 <= maxV; v0++ {
 			for v1 := 0; v1 <= maxV; v1++ {
@@ -519,7 +524,7 @@ func (m *Machine) solveCounterBFS() ([]int, int) {
 	visited := make(map[string]struct{}, 100000)
 	visited[fmt.Sprint(initialCounts)] = struct{}{}
 	
-	maxVisited := 10000000
+	maxVisited := 50000000 // Large limit for optimal solutions
 	
 	for len(queue) > 0 {
 		if len(visited) > maxVisited {
