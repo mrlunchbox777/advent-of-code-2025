@@ -208,8 +208,311 @@ type State struct {
 	heuristic int // h(n): estimated cost to goal
 }
 
-// SolveCounter uses simple BFS with aggressive pruning
+// SolveCounter solves using Gaussian elimination + search
 func (m *Machine) SolveCounter() ([]int, int) {
+	// Try Gaussian elimination approach first
+	if path, count := m.solveCounterGaussian(); path != nil {
+		return path, count
+	}
+	
+	// Fallback to BFS
+	return m.solveCounterBFS()
+}
+
+// solveCounterGaussian uses Gaussian elimination to solve the linear system
+func (m *Machine) solveCounterGaussian() ([]int, int) {
+	numPositions := len(m.TargetCounts)
+	numOptions := len(m.Options)
+	
+	// Build the matrix A where A[i][j] = 1 if option j affects position i
+	A := make([][]float64, numPositions)
+	for i := range A {
+		A[i] = make([]float64, numOptions)
+	}
+	
+	for optIdx, opt := range m.Options {
+		for _, pos := range opt {
+			if pos >= 0 && pos < numPositions {
+				A[pos][optIdx] = 1
+			}
+		}
+	}
+	
+	// Target vector b
+	b := make([]float64, numPositions)
+	for i := range b {
+		b[i] = float64(m.TargetCounts[i])
+	}
+	
+	// Perform Gaussian elimination with partial pivoting
+	// Augment matrix [A | b]
+	aug := make([][]float64, numPositions)
+	for i := range aug {
+		aug[i] = make([]float64, numOptions+1)
+		copy(aug[i], A[i])
+		aug[i][numOptions] = b[i]
+	}
+	
+	// Forward elimination
+	pivotCols := []int{}
+	row := 0
+	for col := 0; col < numOptions && row < numPositions; col++ {
+		// Find pivot
+		maxRow := row
+		maxVal := abs(aug[row][col])
+		for i := row + 1; i < numPositions; i++ {
+			if abs(aug[i][col]) > maxVal {
+				maxVal = abs(aug[i][col])
+				maxRow = i
+			}
+		}
+		
+		if maxVal < 1e-10 {
+			continue // Skip this column
+		}
+		
+		// Swap rows
+		aug[row], aug[maxRow] = aug[maxRow], aug[row]
+		pivotCols = append(pivotCols, col)
+		
+		// Eliminate
+		pivot := aug[row][col]
+		for j := col; j <= numOptions; j++ {
+			aug[row][j] /= pivot
+		}
+		
+		for i := 0; i < numPositions; i++ {
+			if i != row {
+				factor := aug[i][col]
+				for j := col; j <= numOptions; j++ {
+					aug[i][j] -= factor * aug[row][j]
+				}
+			}
+		}
+		row++
+	}
+	
+	// Identify free variables
+	freeVars := []int{}
+	isPivot := make([]bool, numOptions)
+	for _, col := range pivotCols {
+		isPivot[col] = true
+	}
+	for i := 0; i < numOptions; i++ {
+		if !isPivot[i] {
+			freeVars = append(freeVars, i)
+		}
+	}
+	
+	// Try to find integer solution
+	if len(freeVars) == 0 {
+		// Direct solution - check if all integer
+		solution := make([]int, numOptions)
+		for rowIdx, col := range pivotCols {
+			val := aug[rowIdx][numOptions]
+			if abs(val-float64(int(val+0.5))) > 0.01 {
+				return nil, -1
+			}
+			solution[col] = int(val + 0.5)
+			if solution[col] < 0 {
+				return nil, -1
+			}
+		}
+		return solutionToPath(solution), sumInts(solution)
+	} else if len(freeVars) <= 2 {
+		// Search over free variables
+		return m.searchFreeVars(aug, pivotCols, freeVars, numOptions)
+	}
+	
+	// Too many free variables, fallback
+	return nil, -1
+}
+
+func (m *Machine) searchFreeVars(aug [][]float64, pivotCols, freeVars []int, numOptions int) ([]int, int) {
+	bestSolution := []int(nil)
+	bestCost := int(1e9)
+	
+	// Estimate max bound from target values
+	maxTarget := 0
+	for _, t := range m.TargetCounts {
+		if t > maxTarget {
+			maxTarget = t
+		}
+	}
+	maxVal := maxTarget
+	if maxVal > 200 {
+		maxVal = 200
+	}
+	
+	if len(freeVars) == 1 {
+		// Single free variable - can search exhaustively
+		for v0 := 0; v0 <= maxVal; v0++ {
+			if solution, cost := m.trySolution(aug, pivotCols, freeVars, []int{v0}, numOptions); solution != nil {
+				if cost < bestCost {
+					bestSolution = solution
+					bestCost = cost
+					if cost == 0 {
+						break
+					}
+				}
+			}
+		}
+	} else if len(freeVars) == 2 {
+		// Two free variables
+		maxV := 100 // Fixed reasonable bound
+		
+		for v0 := 0; v0 <= maxV; v0++ {
+			for v1 := 0; v1 <= maxV; v1++ {
+				if solution, cost := m.trySolution(aug, pivotCols, freeVars, []int{v0, v1}, numOptions); solution != nil {
+					if cost < bestCost {
+						bestSolution = solution
+						bestCost = cost
+					}
+				}
+			}
+		}
+	}
+	
+	if bestSolution != nil {
+		return solutionToPath(bestSolution), bestCost
+	}
+	return nil, -1
+}
+
+func (m *Machine) trySolution(aug [][]float64, pivotCols, freeVars, freeVals []int, numOptions int) ([]int, int) {
+	solution := make([]int, numOptions)
+	
+	// Set free variables
+	for i, fv := range freeVars {
+		solution[fv] = freeVals[i]
+	}
+	
+	// Solve for pivot variables
+	for rowIdx, col := range pivotCols {
+		val := aug[rowIdx][numOptions] // RHS
+		for _, fv := range freeVars {
+			val -= aug[rowIdx][fv] * float64(solution[fv])
+		}
+		
+		if abs(val-float64(int(val+0.5))) > 0.01 {
+			return nil, -1
+		}
+		intVal := int(val + 0.5)
+		if intVal < 0 {
+			return nil, -1
+		}
+		solution[col] = intVal
+	}
+	
+	cost := sumInts(solution)
+	return solution, cost
+}
+
+func abs(x float64) float64 {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
+func sumInts(arr []int) int {
+	sum := 0
+	for _, v := range arr {
+		sum += v
+	}
+	return sum
+}
+
+func solutionToPath(solution []int) []int {
+	var path []int
+	for optIdx, count := range solution {
+		for i := 0; i < count; i++ {
+			path = append(path, optIdx)
+		}
+	}
+	return path
+}
+
+// solveCounterGreedy uses iterative refinement
+func (m *Machine) solveCounterGreedy() ([]int, int) {
+	// Try to solve using a mathematical approach
+	// Count how many times each option should be used
+	optionCounts := make([]int, len(m.Options))
+	
+	// Start with a greedy estimate
+	remaining := make([]int, len(m.TargetCounts))
+	copy(remaining, m.TargetCounts)
+	
+	maxIterations := 500
+	for iteration := 0; iteration < maxIterations; iteration++ {
+		// Check if solved
+		allZero := true
+		for _, r := range remaining {
+			if r != 0 {
+				allZero = false
+				break
+			}
+		}
+		if allZero {
+			// Convert option counts to path
+			var path []int
+			for optIdx, count := range optionCounts {
+				for i := 0; i < count; i++ {
+					path = append(path, optIdx)
+				}
+			}
+			return path, len(path)
+		}
+		
+		// Find the option that best satisfies the most critical remaining position
+		bestOption := -1
+		bestScore := float64(-1)
+		
+		for i := range m.Options {
+			score := float64(0)
+			canUse := true
+			usefulCount := 0
+			
+			for _, pos := range m.Options[i] {
+				if pos >= 0 && pos < len(remaining) {
+					if remaining[pos] > 0 {
+						score += float64(remaining[pos])
+						usefulCount++
+					} else if remaining[pos] < 0 {
+						canUse = false
+						break
+					}
+				}
+			}
+			
+			// Normalize by the number of positions this option affects
+			if canUse && usefulCount > 0 {
+				score = score / float64(len(m.Options[i]))
+				if score > bestScore {
+					bestScore = score
+					bestOption = i
+				}
+			}
+		}
+		
+		if bestOption == -1 {
+			return nil, -1
+		}
+		
+		// Use this option once
+		optionCounts[bestOption]++
+		for _, pos := range m.Options[bestOption] {
+			if pos >= 0 && pos < len(remaining) {
+				remaining[pos]--
+			}
+		}
+	}
+	
+	return nil, -1
+}
+
+// solveCounterBFS is the fallback BFS solver
+func (m *Machine) solveCounterBFS() ([]int, int) {
 	type QueueItem struct {
 		counts []int
 		path   []int
@@ -221,7 +524,7 @@ func (m *Machine) SolveCounter() ([]int, int) {
 	visited := make(map[string]struct{}, 100000)
 	visited[fmt.Sprint(initialCounts)] = struct{}{}
 	
-	maxVisited := 1000000
+	maxVisited := 5000000
 	
 	for len(queue) > 0 {
 		if len(visited) > maxVisited {
