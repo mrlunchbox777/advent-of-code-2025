@@ -157,7 +157,7 @@ go test -bench=. -benchtime=1s
    - Part way through I think I found what I missed, each point is connected to the next one creating a weird polygon. I interrupted the AI before it wrote anything and informed it of this.
 10. That was the issue, once I clarified the order mattered for drawing the polygon it worked.
 
-TODO: summary of thoughts
+Part 1 was straight forward and very simple. It struggled significantly with part 2, and I think it's because of the sub step I found in part 9. I didn't fully understand the problem, and only thought of the possible issue when I had it generate a visualization. I saw the intersections there and then re-read the prompt more carefully and updated the instructions, then it got it right away.
 
 - I did not give the AI the exact instructions from Advent of Code, but rather paraphrased them with my understanding of the problem.
 - I did not ask the AI to optimize for performance or efficiency.
