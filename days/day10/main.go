@@ -9,11 +9,17 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %s <path-to-input-file>\n", filepath.Base(os.Args[0]))
+	if len(os.Args) != 3 {
+		fmt.Fprintf(os.Stderr, "Usage: %s <path-to-input-file> <mode>\n", filepath.Base(os.Args[0]))
+		fmt.Fprintf(os.Stderr, "  mode: 'toggle' or 'counter'\n")
 		os.Exit(2)
 	}
 	path := os.Args[1]
+	mode := os.Args[2]
+	if mode != "toggle" && mode != "counter" {
+		fmt.Fprintf(os.Stderr, "Invalid mode %q. Must be 'toggle' or 'counter'\n", mode)
+		os.Exit(2)
+	}
 	f, err := os.Open(path)
 	if err != nil {
 		log.Fatalf("failed to open file: %v", err)
@@ -30,7 +36,7 @@ func main() {
 		log.Fatalf("read error: %v", err)
 	}
 
-	results, totalSelections := ProcessLines(lines)
+	results, totalSelections := ProcessLines(lines, mode)
 	for _, result := range results {
 		fmt.Println(result)
 	}

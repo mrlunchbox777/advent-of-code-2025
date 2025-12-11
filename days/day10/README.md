@@ -6,17 +6,28 @@ This program solves the toggle machine problem where you need to find the minimu
 
 Each line in the input file represents a toggle machine with:
 
-- **Desired State**: Wrapped in square brackets `[...]` containing '.' (off) and '#' (on)
+- **Desired State** (toggle mode): Wrapped in square brackets `[...]` containing '.' (off) and '#' (on)
 - **Options**: Sets of comma-separated numbers in parentheses `(...)` that toggle positions when selected
-- **Metadata**: Curly braces `{...}` containing data that is currently ignored
+- **Target Counts** (counter mode): Wrapped in curly braces `{...}` containing target toggle counts for each position
+
+### Toggle Mode
 
 All positions start in the OFF state. The goal is to find the minimum number of option selections needed to reach the desired state.
+
+### Counter Mode
+
+All positions start at count 0. Each time an option is selected, it increments the count at the specified positions. The goal is to find the minimum number of option selections to reach the exact target counts.
 
 ## Usage
 
 ```bash
-./day10 <path-to-input-file>
+./day10 <path-to-input-file> <mode>
 ```
+
+Where `<mode>` is either:
+
+- `toggle` - Find minimum selections to reach desired toggle state (square brackets)
+- `counter` - Find minimum selections to reach target toggle counts (curly braces)
 
 ## Example
 
@@ -28,10 +39,10 @@ Given `example-data.txt`:
 [.###.#] (0,1,2,3,4) (0,3,4) (0,1,2,4,5) (1,2) {10,11,11,5,10,5}
 ```
 
-Running the program:
+Running the program in toggle mode:
 
 ```bash
-./day10 example-data.txt
+./day10 example-data.txt toggle
 ```
 
 Output:
@@ -41,6 +52,21 @@ Line 1: 2 selections - options [2 4]
 Line 2: 3 selections - options [3 4 5]
 Line 3: 2 selections - options [2 3]
 Total selections: 7
+```
+
+Running the program in counter mode:
+
+```bash
+./day10 example-data.txt counter
+```
+
+Output:
+
+```
+Line 1: 10 selections - options [1 2 2 2 2 2 4 5 5 5]
+Line 2: 12 selections - options [1 1 2 2 2 2 2 4 4 4 4 4]
+Line 3: 11 selections - options [1 1 1 1 1 3 3 3 3 3 4]
+Total selections: 33
 ```
 
 ## Building
@@ -57,20 +83,25 @@ go test
 
 ## Algorithm
 
-The program uses Breadth-First Search (BFS) to find the shortest path from the initial state (all off) to the desired state. This guarantees finding the minimum number of selections needed.
+The program uses Breadth-First Search (BFS) to find the shortest path from the initial state to the target state. This guarantees finding the minimum number of selections needed.
+
+In toggle mode, BFS explores all possible toggle states until finding one matching the desired state. In counter mode, BFS explores all possible counter combinations until finding one matching the target counts.
 
 ## Implementation Details
 
-- **Machine struct**: Holds the desired state and available options
-- **ParseMachine**: Parses input lines into Machine structs
-- **ApplyOption**: Applies an option to toggle specified positions
-- **Solve**: Uses BFS to find the minimum path to the desired state
-- **ProcessLines**: Processes all lines and accumulates results
+- **Machine struct**: Holds the desired state, target counts, and available options
+- **ParseMachine**: Parses input lines into Machine structs, extracting both toggle states and target counts
+- **ApplyOption**: Applies an option to toggle specified positions (toggle mode)
+- **ApplyOptionCounter**: Applies an option to increment counters at specified positions (counter mode)
+- **Solve**: Uses BFS to find the minimum path to the desired state (toggle mode)
+- **SolveCounter**: Uses BFS to find the minimum path to the target counts (counter mode)
+- **ProcessLines**: Processes all lines in the specified mode and accumulates results
 
 ## Thoughts On AI Solutions
 
-1. The AI understood the requirements and generated a complete solution. I actually made a typo and said that line 1 should be 3 selections when it is actually 2, but the AI still produced correct logic.
+1. The AI understood the requirements and generated a complete solution. I actually made a typo and said that line 1 should be 3 selections when it is actually 2, but the AI still produced correct logic. It did have to be interrupted and restarted once.
 2. I tested the solution against the puzzle input and it worked correctly.
+3. I asked it to solve part 2 and it seemed to find a working answer, but it was too slow when tested with the puzzle input. I asked the AI to optimize it.
 
 TODO: summary of thoughts
 
@@ -90,3 +121,5 @@ TODO: summary of thoughts
 > For reference processing, @days/day10/example-data.txt line 1 should be 3 selections, line 2 is also 3 selections, line 3 is 2, the total for the file is 7.
 
 #### Part 2
+
+Add another mandatory parameter that chooses between toggle (current) mode and counter mode. In counter mode the section with square brackets is ignored and the curly brace section is used instead, each position represents the target number of toggles for each position. The goal is to reach exactly the number in the corresponding position in the curly brace section. The rest of the logic remains the same, find the minimum number of selections from the options to reach that goal. For reference processing, @days/day10/example-data.txt line 1 should be 10 selections, line 2 is also 12 selections, line 3 is 11, the total for the file is 33.

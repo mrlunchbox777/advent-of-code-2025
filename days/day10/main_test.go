@@ -10,32 +10,36 @@ import (
 
 func TestParseMachine(t *testing.T) {
 	tests := []struct {
-		name     string
-		line     string
-		wantLen  int
-		wantOpts int
-		wantErr  bool
+		name           string
+		line           string
+		wantLen        int
+		wantOpts       int
+		wantCountsLen  int
+		wantErr        bool
 	}{
 		{
-			name:     "line1",
-			line:     "[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}",
-			wantLen:  4,
-			wantOpts: 6,
-			wantErr:  false,
+			name:          "line1",
+			line:          "[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}",
+			wantLen:       4,
+			wantOpts:      6,
+			wantCountsLen: 4,
+			wantErr:       false,
 		},
 		{
-			name:     "line2",
-			line:     "[...#.] (0,2,3,4) (2,3) (0,4) (0,1,2) (1,2,3,4) {7,5,12,7,2}",
-			wantLen:  5,
-			wantOpts: 5,
-			wantErr:  false,
+			name:          "line2",
+			line:          "[...#.] (0,2,3,4) (2,3) (0,4) (0,1,2) (1,2,3,4) {7,5,12,7,2}",
+			wantLen:       5,
+			wantOpts:      5,
+			wantCountsLen: 5,
+			wantErr:       false,
 		},
 		{
-			name:     "line3",
-			line:     "[.###.#] (0,1,2,3,4) (0,3,4) (0,1,2,4,5) (1,2) {10,11,11,5,10,5}",
-			wantLen:  6,
-			wantOpts: 4,
-			wantErr:  false,
+			name:          "line3",
+			line:          "[.###.#] (0,1,2,3,4) (0,3,4) (0,1,2,4,5) (1,2) {10,11,11,5,10,5}",
+			wantLen:       6,
+			wantOpts:      4,
+			wantCountsLen: 6,
+			wantErr:       false,
 		},
 	}
 
@@ -52,6 +56,9 @@ func TestParseMachine(t *testing.T) {
 				}
 				if len(m.Options) != tt.wantOpts {
 					t.Errorf("Options count = %d, want %d", len(m.Options), tt.wantOpts)
+				}
+				if len(m.TargetCounts) != tt.wantCountsLen {
+					t.Errorf("TargetCounts length = %d, want %d", len(m.TargetCounts), tt.wantCountsLen)
 				}
 			}
 		})
@@ -95,7 +102,7 @@ func TestMachineSolve(t *testing.T) {
 	}
 }
 
-func TestProcessExampleData(t *testing.T) {
+func TestProcessExampleDataToggleMode(t *testing.T) {
 	p := filepath.Join(".", "example-data.txt")
 	b, err := os.ReadFile(p)
 	if err != nil {
@@ -103,7 +110,7 @@ func TestProcessExampleData(t *testing.T) {
 	}
 
 	lines := strings.Split(strings.TrimSpace(string(b)), "\n")
-	results, totalSelections := ProcessLines(lines)
+	results, totalSelections := ProcessLines(lines, "toggle")
 
 	if len(results) != 3 {
 		t.Fatalf("expected 3 results, got %d", len(results))
@@ -116,6 +123,34 @@ func TestProcessExampleData(t *testing.T) {
 
 	// Verify each line has the correct number of selections
 	expectedSelections := []int{2, 3, 2}
+	for i, expected := range expectedSelections {
+		if !strings.Contains(results[i], fmt.Sprintf("%d selections", expected)) {
+			t.Errorf("Line %d: expected %d selections, got %s", i+1, expected, results[i])
+		}
+	}
+}
+
+func TestProcessExampleDataCounterMode(t *testing.T) {
+	p := filepath.Join(".", "example-data.txt")
+	b, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatalf("failed to read example data: %v", err)
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(b)), "\n")
+	results, totalSelections := ProcessLines(lines, "counter")
+
+	if len(results) != 3 {
+		t.Fatalf("expected 3 results, got %d", len(results))
+	}
+
+	expectedTotal := 33
+	if totalSelections != expectedTotal {
+		t.Errorf("total selections = %d, want %d", totalSelections, expectedTotal)
+	}
+
+	// Verify each line has the correct number of selections
+	expectedSelections := []int{10, 12, 11}
 	for i, expected := range expectedSelections {
 		if !strings.Contains(results[i], fmt.Sprintf("%d selections", expected)) {
 			t.Errorf("Line %d: expected %d selections, got %s", i+1, expected, results[i])
@@ -155,5 +190,35 @@ func TestApplyOption(t *testing.T) {
 	// Verify we reached desired state
 	if !StatesEqual(state, m.DesiredState) {
 		t.Errorf("Final state %v doesn't match desired %v", state, m.DesiredState)
+	}
+}
+
+func TestApplyOptionCounter(t *testing.T) {
+	m := &Machine{
+		TargetCounts: []int{3, 5, 4, 7},
+		Options:      [][]int{{3}, {1, 3}, {2}},
+	}
+
+	counts := []int{0, 0, 0, 0}
+	
+	// Apply option 0 (increment position 3)
+	counts = m.ApplyOptionCounter(counts, 0)
+	expectedCounts := []int{0, 0, 0, 1}
+	if !CountsEqual(counts, expectedCounts) {
+		t.Errorf("After option 0: got %v, want %v", counts, expectedCounts)
+	}
+
+	// Apply option 1 (increment positions 1,3)
+	counts = m.ApplyOptionCounter(counts, 1)
+	expectedCounts = []int{0, 1, 0, 2}
+	if !CountsEqual(counts, expectedCounts) {
+		t.Errorf("After option 1: got %v, want %v", counts, expectedCounts)
+	}
+
+	// Apply option 2 (increment position 2)
+	counts = m.ApplyOptionCounter(counts, 2)
+	expectedCounts = []int{0, 1, 1, 2}
+	if !CountsEqual(counts, expectedCounts) {
+		t.Errorf("After option 2: got %v, want %v", counts, expectedCounts)
 	}
 }

@@ -8,8 +8,9 @@ import (
 
 // Machine represents a toggle machine with desired state and options
 type Machine struct {
-	DesiredState []bool
-	Options      [][]int
+	DesiredState   []bool
+	TargetCounts   []int
+	Options        [][]int
 }
 
 // ParseMachine parses a line into a Machine
@@ -33,6 +34,25 @@ func ParseMachine(line string) (*Machine, error) {
 			desired[i] = true
 		} else if ch != '.' {
 			return nil, fmt.Errorf("invalid character in desired state: %c", ch)
+		}
+	}
+
+	// Parse target counts (in curly braces)
+	var targetCounts []int
+	curlyStart := strings.Index(line, "{")
+	curlyEnd := strings.Index(line, "}")
+	if curlyStart != -1 && curlyEnd != -1 {
+		countsStr := line[curlyStart+1 : curlyEnd]
+		for _, part := range strings.Split(countsStr, ",") {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+			n, err := strconv.Atoi(part)
+			if err != nil {
+				return nil, fmt.Errorf("invalid number in target counts: %s", part)
+			}
+			targetCounts = append(targetCounts, n)
 		}
 	}
 
@@ -80,11 +100,12 @@ func ParseMachine(line string) (*Machine, error) {
 
 	return &Machine{
 		DesiredState: desired,
+		TargetCounts: targetCounts,
 		Options:      options,
 	}, nil
 }
 
-// ApplyOption applies an option to the current state
+// ApplyOption applies an option to the current state (toggle mode)
 func (m *Machine) ApplyOption(state []bool, optionIdx int) []bool {
 	newState := make([]bool, len(state))
 	copy(newState, state)
@@ -94,6 +115,18 @@ func (m *Machine) ApplyOption(state []bool, optionIdx int) []bool {
 		}
 	}
 	return newState
+}
+
+// ApplyOptionCounter applies an option to counter state
+func (m *Machine) ApplyOptionCounter(counts []int, optionIdx int) []int {
+	newCounts := make([]int, len(counts))
+	copy(newCounts, counts)
+	for _, pos := range m.Options[optionIdx] {
+		if pos >= 0 && pos < len(newCounts) {
+			newCounts[pos]++
+		}
+	}
+	return newCounts
 }
 
 // StatesEqual checks if two states are equal
@@ -109,7 +142,20 @@ func StatesEqual(a, b []bool) bool {
 	return true
 }
 
-// Solve finds the minimum number of option selections to reach desired state using BFS
+// CountsEqual checks if two count arrays are equal
+func CountsEqual(a, b []int) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// Solve finds the minimum number of option selections to reach desired state using BFS (toggle mode)
 func (m *Machine) Solve() ([]int, int) {
 	initialState := make([]bool, len(m.DesiredState))
 
@@ -153,6 +199,50 @@ func (m *Machine) Solve() ([]int, int) {
 	return nil, -1
 }
 
+// SolveCounter finds the minimum number of selections to reach target counts using BFS
+func (m *Machine) SolveCounter() ([]int, int) {
+	initialCounts := make([]int, len(m.TargetCounts))
+
+	// BFS to find shortest path
+	type SearchNode struct {
+		counts    []int
+		path      []int
+		selection int
+	}
+
+	queue := []SearchNode{{counts: initialCounts, path: []int{}, selection: 0}}
+	visited := make(map[string]bool)
+	visited[countsKey(initialCounts)] = true
+
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+
+		if CountsEqual(current.counts, m.TargetCounts) {
+			return current.path, current.selection
+		}
+
+		// Try each option
+		for i := range m.Options {
+			newCounts := m.ApplyOptionCounter(current.counts, i)
+			key := countsKey(newCounts)
+			if !visited[key] {
+				visited[key] = true
+				newPath := make([]int, len(current.path))
+				copy(newPath, current.path)
+				newPath = append(newPath, i)
+				queue = append(queue, SearchNode{
+					counts:    newCounts,
+					path:      newPath,
+					selection: current.selection + 1,
+				})
+			}
+		}
+	}
+
+	return nil, -1
+}
+
 // stateKey creates a string key from a state for use in visited map
 func stateKey(state []bool) string {
 	var sb strings.Builder
@@ -166,8 +256,20 @@ func stateKey(state []bool) string {
 	return sb.String()
 }
 
+// countsKey creates a string key from counts for use in visited map
+func countsKey(counts []int) string {
+	var sb strings.Builder
+	for i, c := range counts {
+		if i > 0 {
+			sb.WriteByte(',')
+		}
+		sb.WriteString(strconv.Itoa(c))
+	}
+	return sb.String()
+}
+
 // ProcessLines processes all lines and returns results
-func ProcessLines(lines []string) ([]string, int) {
+func ProcessLines(lines []string, mode string) ([]string, int) {
 	var results []string
 	totalSelections := 0
 	lineNum := 1
@@ -185,7 +287,14 @@ func ProcessLines(lines []string) ([]string, int) {
 			continue
 		}
 
-		path, selections := machine.Solve()
+		var path []int
+		var selections int
+		if mode == "counter" {
+			path, selections = machine.SolveCounter()
+		} else {
+			path, selections = machine.Solve()
+		}
+
 		if selections == -1 {
 			results = append(results, fmt.Sprintf("Line %d: No solution found", lineNum))
 		} else {
