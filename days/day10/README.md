@@ -123,6 +123,7 @@ The example data solves quickly (~500ms), but some puzzle inputs with very large
 11. The first try from part 9 got `Total selections: 4985` and took`./temptest/day10 puzzle-input.txt counter  5651.02s user 133.57s system 55% cpu 2:54:01.80 total`, the second try from part 10 got `Total selections: 19739` and took `./day10 ../puzzle-input.txt counter  2454.51s user 198.49s system 73% cpu 59:59.21 total`. Since the second try finished first I tried it first, but the answer was too low, so I didn't try the first one. I'm going to try to get it to forget about optimizations and just focus on correctness again.
 12. It tried again and took `./day10 puzzle-input.txt counter 2>&1  5801.18s user 6636.05s system 65% cpu 5:15:24.41 total
 tee output.txt  0.00s user 0.01s system 0% cpu 5:15:24.41 total`. Unfortunately, that output didn't get saved, but I did get the answer it produced, though I didn't save it here. It was above 69k and below 70k. I will have it try again.
+13. Doing two commits on this one, I asked it to try again after i had to reset it's context, unrelated. I also am going to ask it to print as it goes.
 
 TODO: summary of thoughts
 

@@ -211,6 +211,23 @@ type State struct {
 
 // SolveCounter solves using Gaussian elimination first, then BFS fallback
 func (m *Machine) SolveCounter() ([]int, int) {
+	// For very small problems, use BFS directly (it's guaranteed optimal)
+	maxTarget := 0
+	for _, t := range m.TargetCounts {
+		if t > maxTarget {
+			maxTarget = t
+		}
+	}
+	totalTarget := 0
+	for _, t := range m.TargetCounts {
+		totalTarget += t
+	}
+	
+	// If small enough, use BFS which guarantees optimal
+	if totalTarget <= 50 && len(m.Options) <= 10 {
+		return m.solveCounterBFS()
+	}
+	
 	// Try Gaussian elimination approach first (fast for low free variables)
 	if path, count := m.solveCounterGaussian(); path != nil {
 		return path, count
@@ -329,45 +346,81 @@ func (m *Machine) solveCounterGaussian() ([]int, int) {
 	return nil, -1
 }
 
+type freeVarCandidate struct {
+	freeVals []int
+	cost     int // Heuristic cost (sum of free vars)
+}
+
 func (m *Machine) searchFreeVars(aug [][]float64, pivotCols, freeVars []int, numOptions int) ([]int, int) {
-	bestSolution := []int(nil)
-	bestCost := int(1e9)
+	// Search by exploring in order of increasing free variable values
+	// Track best solution found
 	
-	// Estimate max bound from target values
+	visited := make(map[string]bool)
 	maxTarget := 0
 	for _, t := range m.TargetCounts {
 		if t > maxTarget {
 			maxTarget = t
 		}
 	}
-	maxVal := maxTarget
-	if maxVal > 200 {
-		maxVal = 200
+	
+	// Check if zero free vars works
+	initial := make([]int, len(freeVars))
+	if solution, cost := m.trySolution(aug, pivotCols, freeVars, initial, numOptions); solution != nil {
+		return solutionToPath(solution), cost
 	}
 	
-	if len(freeVars) == 1 {
-		// Single free variable - can search exhaustively
-		for v0 := 0; v0 <= maxVal; v0++ {
-			if solution, cost := m.trySolution(aug, pivotCols, freeVars, []int{v0}, numOptions); solution != nil {
-				if cost < bestCost {
-					bestSolution = solution
-					bestCost = cost
-					if cost == 0 {
-						break
-					}
-				}
-			}
-		}
-	} else if len(freeVars) == 2 {
-		// Two free variables
-		maxV := 100 // Search bound
+	// BFS search in free variable space, ordered by sum (which is a lower bound on actual cost)
+	pq := []freeVarCandidate{{freeVals: initial, cost: 0}}
+	visited[fmt.Sprint(initial)] = true
+	
+	bestSolution := []int(nil)
+	bestCost := int(1e9)
+	
+	maxBound := maxTarget
+	statesExplored := 0
+	maxStates := 2000000 // Much larger search space
+	
+	for len(pq) > 0 && statesExplored < maxStates {
+		// Pop minimum cost candidate
+		current := pq[0]
+		pq = pq[1:]
+		statesExplored++
 		
-		for v0 := 0; v0 <= maxV; v0++ {
-			for v1 := 0; v1 <= maxV; v1++ {
-				if solution, cost := m.trySolution(aug, pivotCols, freeVars, []int{v0, v1}, numOptions); solution != nil {
-					if cost < bestCost {
-						bestSolution = solution
-						bestCost = cost
+		// Early termination: if current heuristic cost >= best found, we can skip
+		if bestCost < 1e9 && current.cost >= bestCost {
+			continue
+		}
+		
+		// Expand: try incrementing each free variable
+		for i := range freeVars {
+			if current.freeVals[i] < maxBound {
+				newVals := make([]int, len(current.freeVals))
+				copy(newVals, current.freeVals)
+				newVals[i]++
+				
+				key := fmt.Sprint(newVals)
+				if !visited[key] {
+					visited[key] = true
+					
+					// Try this solution
+					if solution, cost := m.trySolution(aug, pivotCols, freeVars, newVals, numOptions); solution != nil {
+						if cost < bestCost {
+							bestSolution = solution
+							bestCost = cost
+						}
+						// Use actual cost for priority
+						sumVals := 0
+						for _, v := range newVals {
+							sumVals += v
+						}
+						pq = insertSorted(pq, freeVarCandidate{freeVals: newVals, cost: sumVals})
+					} else {
+						// Invalid solution, use heuristic
+						sumVals := 0
+						for _, v := range newVals {
+							sumVals += v
+						}
+						pq = insertSorted(pq, freeVarCandidate{freeVals: newVals, cost: sumVals})
 					}
 				}
 			}
@@ -378,6 +431,24 @@ func (m *Machine) searchFreeVars(aug [][]float64, pivotCols, freeVars []int, num
 		return solutionToPath(bestSolution), bestCost
 	}
 	return nil, -1
+}
+
+func insertSorted(pq []freeVarCandidate, item freeVarCandidate) []freeVarCandidate {
+	// Binary search insertion
+	left, right := 0, len(pq)
+	for left < right {
+		mid := (left + right) / 2
+		if pq[mid].cost < item.cost {
+			left = mid + 1
+		} else {
+			right = mid
+		}
+	}
+	// Insert at position 'left'
+	pq = append(pq, freeVarCandidate{})
+	copy(pq[left+1:], pq[left:])
+	pq[left] = item
+	return pq
 }
 
 func (m *Machine) trySolution(aug [][]float64, pivotCols, freeVars, freeVals []int, numOptions int) ([]int, int) {
