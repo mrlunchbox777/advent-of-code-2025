@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Machine represents a toggle machine with desired state and options
@@ -524,13 +525,9 @@ func (m *Machine) solveCounterBFS() ([]int, int) {
 	visited := make(map[string]struct{}, 100000)
 	visited[fmt.Sprint(initialCounts)] = struct{}{}
 	
-	maxVisited := 50000000 // Large limit for optimal solutions
+	// No limit - continue until solution is found
 	
 	for len(queue) > 0 {
-		if len(visited) > maxVisited {
-			return nil, -1
-		}
-		
 		current := queue[0]
 		queue = queue[1:]
 		
@@ -681,6 +678,7 @@ func ProcessLines(lines []string, mode string) ([]string, int) {
 			continue
 		}
 
+		startTime := time.Now()
 		var path []int
 		var selections int
 		if mode == "counter" {
@@ -688,16 +686,17 @@ func ProcessLines(lines []string, mode string) ([]string, int) {
 		} else {
 			path, selections = machine.Solve()
 		}
+		elapsed := time.Since(startTime)
 
 		if selections == -1 {
-			results = append(results, fmt.Sprintf("Line %d: No solution found", lineNum))
+			results = append(results, fmt.Sprintf("Line %d: No solution found (%.2fs)", lineNum, elapsed.Seconds()))
 		} else {
 			// Convert 0-indexed options to 1-indexed for display
 			displayPath := make([]int, len(path))
 			for i, p := range path {
 				displayPath[i] = p + 1
 			}
-			results = append(results, fmt.Sprintf("Line %d: %d selections - options %v", lineNum, selections, displayPath))
+			results = append(results, fmt.Sprintf("Line %d: %d selections - options %v (%.2fs)", lineNum, selections, displayPath, elapsed.Seconds()))
 			totalSelections += selections
 		}
 		lineNum++
