@@ -145,8 +145,9 @@ tee output.txt  0.00s user 0.01s system 0% cpu 5:15:24.41 total`. Unfortunately,
 13. Doing two commits on this one, I asked it to try again after i had to reset it's context, unrelated. I also am going to ask it to print as it goes.
 14. I attempted to let it run for a day. It got up to 120GB of memory usage (on a 32GB machine) before I killed it. It produced output-1.txt and `./day10 puzzle-input.txt counter 2>&1  28668.97s user 19281.23s system 58% cpu 22:38:09.68 total` and `tee output.txt  0.00s user 0.01s system 0% cpu 22:38:06.07 total`. I'm going to have it try again with a memory limit.
 15. It tried again and went significantly faster, `./day10 puzzle-input.txt counter 2>&1  16.88s user 0.10s system 112% cpu 15.077 total` and `tee output.txt  0.00s user 0.00s system 0% cpu 15.076 total`. It produced output-2.txt. The answer was 21066, which is incorrect! I'm going to have it try again with a focus on correctness.
+16. We finally got the correct answer of 20871. It was able to get this answer in .55s. This took DAYS of iteration and restarts. But it finally got there.
 
-TODO: summary of thoughts
+The AI was able to produce a working solution for part 1 quickly, but part 2 was very challenging due to the complexity of the problem. It required multiple iterations and optimizations, as well as external hints about numerical methods to finally arrive at a correct and efficient solution. It was getting very disheartening to see it struggle and flip back and forth between approaches, but once I started giving it requirements around memory usage and the importance of correctness over speed, it was able to focus and produce a valid solution. It was also very impressive to see it implement Gaussian elimination and free variable search, which are advanced techniques not commonly seen in typical coding challenge solutions. It also demonstrated the fastest solve time for an app that I've seen, which is impressive.
 
 - I did not give the AI the exact instructions from Advent of Code, but rather paraphrased them with my understanding of the problem.
 - ~~I did not ask the AI to optimize for performance or efficiency.~~

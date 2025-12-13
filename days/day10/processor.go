@@ -209,31 +209,14 @@ type State struct {
 	heuristic int // h(n): estimated cost to goal
 }
 
-// SolveCounter solves using Gaussian elimination first, then BFS fallback
+// SolveCounter solves using Gaussian elimination with Dijkstra on free variables
 func (m *Machine) SolveCounter() ([]int, int) {
-	// For very small problems, use BFS directly (it's guaranteed optimal)
-	maxTarget := 0
-	for _, t := range m.TargetCounts {
-		if t > maxTarget {
-			maxTarget = t
-		}
-	}
-	totalTarget := 0
-	for _, t := range m.TargetCounts {
-		totalTarget += t
-	}
-	
-	// If small enough, use BFS which guarantees optimal
-	if totalTarget <= 50 && len(m.Options) <= 10 {
-		return m.solveCounterBFS()
-	}
-	
-	// Try Gaussian elimination approach first (fast for low free variables)
+	// Try Gaussian elimination - much faster than BFS
 	if path, count := m.solveCounterGaussian(); path != nil {
 		return path, count
 	}
 	
-	// Fallback to BFS for harder cases
+	// Fallback to BFS if Gaussian fails (rare)
 	return m.solveCounterBFS()
 }
 
@@ -351,11 +334,15 @@ type freeVarCandidate struct {
 	cost     int // Heuristic cost (sum of free vars)
 }
 
+type PQItem struct {
+	vals []int
+	cost int
+}
+
 func (m *Machine) searchFreeVars(aug [][]float64, pivotCols, freeVars []int, numOptions int) ([]int, int) {
-	// Search by exploring in order of increasing free variable values
-	// Track best solution found
+	// Exhaustive enumeration of all valid free variable combinations
+	// Find the one with minimum cost
 	
-	visited := make(map[string]bool)
 	maxTarget := 0
 	for _, t := range m.TargetCounts {
 		if t > maxTarget {
@@ -363,69 +350,32 @@ func (m *Machine) searchFreeVars(aug [][]float64, pivotCols, freeVars []int, num
 		}
 	}
 	
-	// Check if zero free vars works
-	initial := make([]int, len(freeVars))
-	if solution, cost := m.trySolution(aug, pivotCols, freeVars, initial, numOptions); solution != nil {
-		return solutionToPath(solution), cost
-	}
-	
-	// BFS search in free variable space, ordered by sum (which is a lower bound on actual cost)
-	pq := []freeVarCandidate{{freeVals: initial, cost: 0}}
-	visited[fmt.Sprint(initial)] = true
-	
 	bestSolution := []int(nil)
 	bestCost := int(1e9)
 	
-	maxBound := maxTarget
-	statesExplored := 0
-	maxStates := 50000000 // Much larger search space (50M)
-	
-	for len(pq) > 0 && statesExplored < maxStates {
-		// Pop minimum cost candidate
-		current := pq[0]
-		pq = pq[1:]
-		statesExplored++
-		
-		// Early termination: if current heuristic cost >= best found, we can skip
-		if bestCost < 1e9 && current.cost >= bestCost {
-			continue
-		}
-		
-		// Expand: try incrementing each free variable
-		for i := range freeVars {
-			if current.freeVals[i] < maxBound {
-				newVals := make([]int, len(current.freeVals))
-				copy(newVals, current.freeVals)
-				newVals[i]++
-				
-				key := fmt.Sprint(newVals)
-				if !visited[key] {
-					visited[key] = true
-					
-					// Try this solution
-					if solution, cost := m.trySolution(aug, pivotCols, freeVars, newVals, numOptions); solution != nil {
-						if cost < bestCost {
-							bestSolution = solution
-							bestCost = cost
-						}
-						// Use actual cost for priority
-						sumVals := 0
-						for _, v := range newVals {
-							sumVals += v
-						}
-						pq = insertSorted(pq, freeVarCandidate{freeVals: newVals, cost: sumVals})
-					} else {
-						// Invalid solution, use heuristic
-						sumVals := 0
-						for _, v := range newVals {
-							sumVals += v
-						}
-						pq = insertSorted(pq, freeVarCandidate{freeVals: newVals, cost: sumVals})
-					}
+	// Use recursive enumeration
+	var enumerate func(vals []int, index int)
+	enumerate = func(vals []int, index int) {
+		if index == len(freeVars) {
+			// Try this combination
+			if solution, cost := m.trySolution(aug, pivotCols, freeVars, vals, numOptions); solution != nil {
+				if cost < bestCost {
+					bestSolution = solution
+					bestCost = cost
 				}
 			}
+			return
+		}
+		
+		// Try all values for this free variable
+		for v := 0; v <= maxTarget; v++ {
+			vals[index] = v
+			enumerate(vals, index+1)
 		}
 	}
+	
+	vals := make([]int, len(freeVars))
+	enumerate(vals, 0)
 	
 	if bestSolution != nil {
 		return solutionToPath(bestSolution), bestCost
@@ -590,7 +540,7 @@ type BeamState struct {
 	cost   int
 }
 
-// solveCounterBFS uses BFS with memory-bounded search
+// solveCounterBFS uses pure BFS for guaranteed optimal solution  
 func (m *Machine) solveCounterBFS() ([]int, int) {
 	type QueueItem struct {
 		counts []int
@@ -600,39 +550,33 @@ func (m *Machine) solveCounterBFS() ([]int, int) {
 	initialCounts := make([]int, len(m.TargetCounts))
 	queue := []QueueItem{{counts: initialCounts, path: []int{}}}
 	
-	// Use byte slice encoding for more efficient visited tracking
-	visited := make(map[string]struct{}, 100000)
+	// Use map for visited states - track with compact encoding
+	visited := make(map[string]struct{})
 	visited[encodeCounts(initialCounts)] = struct{}{}
 	
-	maxQueueSize := 0
-	pruneCount := 0
+	itemsProcessed := 0
 	
 	for len(queue) > 0 {
-		if len(queue) > maxQueueSize {
-			maxQueueSize = len(queue)
-		}
-		
-		// If queue exceeds 1M items, we're in trouble - abort this approach
-		if len(queue) > 1000000 {
-			return nil, -1
-		}
-		
 		current := queue[0]
 		queue = queue[1:]
+		itemsProcessed++
 		
+		// Check for solution
 		if CountsEqual(current.counts, m.TargetCounts) {
 			return current.path, len(current.path)
 		}
 		
-		//  Prune based on depth - if path is already very long, skip
-		if len(current.path) > 500 {
-			pruneCount++
-			continue
+		// Memory safety: if we've processed too many items without finding solution, abort
+		// This prevents indefinite memory growth
+		if itemsProcessed > 50000000 {
+			return nil, -1
 		}
 		
+		// Try each option
 		for i := range m.Options {
 			newCounts := m.ApplyOptionCounter(current.counts, i)
 			
+			// Skip if any position exceeds target
 			valid := true
 			for j := range newCounts {
 				if newCounts[j] > m.TargetCounts[j] {
