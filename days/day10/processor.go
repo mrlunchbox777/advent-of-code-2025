@@ -730,9 +730,8 @@ func countsKey(counts []int) string {
 	return fmt.Sprint(counts)
 }
 
-// ProcessLines processes all lines and returns results
-func ProcessLines(lines []string, mode string) ([]string, int) {
-	var results []string
+// ProcessLines processes all lines and prints results as it goes
+func ProcessLines(lines []string, mode string) int {
 	totalSelections := 0
 	lineNum := 1
 
@@ -744,7 +743,7 @@ func ProcessLines(lines []string, mode string) ([]string, int) {
 
 		machine, err := ParseMachine(line)
 		if err != nil {
-			results = append(results, fmt.Sprintf("Line %d: Error parsing - %v", lineNum, err))
+			fmt.Printf("Line %d: Error parsing - %v\n", lineNum, err)
 			lineNum++
 			continue
 		}
@@ -760,18 +759,18 @@ func ProcessLines(lines []string, mode string) ([]string, int) {
 		elapsed := time.Since(startTime)
 
 		if selections == -1 {
-			results = append(results, fmt.Sprintf("Line %d: No solution found (%.2fs)", lineNum, elapsed.Seconds()))
+			fmt.Printf("Line %d: No solution found (%.2fs)\n", lineNum, elapsed.Seconds())
 		} else {
 			// Convert 0-indexed options to 1-indexed for display
 			displayPath := make([]int, len(path))
 			for i, p := range path {
 				displayPath[i] = p + 1
 			}
-			results = append(results, fmt.Sprintf("Line %d: %d selections - options %v (%.2fs)", lineNum, selections, displayPath, elapsed.Seconds()))
+			fmt.Printf("Line %d: %d selections - options %v (%.2fs)\n", lineNum, selections, displayPath, elapsed.Seconds())
 			totalSelections += selections
 		}
 		lineNum++
 	}
 
-	return results, totalSelections
+	return totalSelections
 }

@@ -124,6 +124,7 @@ The example data solves quickly (~500ms), but some puzzle inputs with very large
 12. It tried again and took `./day10 puzzle-input.txt counter 2>&1  5801.18s user 6636.05s system 65% cpu 5:15:24.41 total
 tee output.txt  0.00s user 0.01s system 0% cpu 5:15:24.41 total`. Unfortunately, that output didn't get saved, but I did get the answer it produced, though I didn't save it here. It was above 69k and below 70k. I will have it try again.
 13. Doing two commits on this one, I asked it to try again after i had to reset it's context, unrelated. I also am going to ask it to print as it goes.
+14. I attempted to let it run for a day. It got up to 120GB of memory usage (on a 32GB machine) before I killed it. It produced output-1.txt and `./day10 puzzle-input.txt counter 2>&1  28668.97s user 19281.23s system 58% cpu 22:38:09.68 total` and `tee output.txt  0.00s user 0.01s system 0% cpu 22:38:06.07 total`. I'm going to have it try again with a memory limit.
 
 TODO: summary of thoughts
 

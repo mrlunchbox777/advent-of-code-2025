@@ -36,9 +36,6 @@ func main() {
 		log.Fatalf("read error: %v", err)
 	}
 
-	results, totalSelections := ProcessLines(lines, mode)
-	for _, result := range results {
-		fmt.Println(result)
-	}
+	totalSelections := ProcessLines(lines, mode)
 	fmt.Printf("Total selections: %d\n", totalSelections)
 }
