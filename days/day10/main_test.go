@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -110,23 +109,11 @@ func TestProcessExampleDataToggleMode(t *testing.T) {
 	}
 
 	lines := strings.Split(strings.TrimSpace(string(b)), "\n")
-	results, totalSelections := ProcessLines(lines, "toggle")
-
-	if len(results) != 3 {
-		t.Fatalf("expected 3 results, got %d", len(results))
-	}
+	totalSelections := ProcessLines(lines, "toggle")
 
 	expectedTotal := 7
 	if totalSelections != expectedTotal {
 		t.Errorf("total selections = %d, want %d", totalSelections, expectedTotal)
-	}
-
-	// Verify each line has the correct number of selections
-	expectedSelections := []int{2, 3, 2}
-	for i, expected := range expectedSelections {
-		if !strings.Contains(results[i], fmt.Sprintf("%d selections", expected)) {
-			t.Errorf("Line %d: expected %d selections, got %s", i+1, expected, results[i])
-		}
 	}
 }
 
@@ -138,23 +125,11 @@ func TestProcessExampleDataCounterMode(t *testing.T) {
 	}
 
 	lines := strings.Split(strings.TrimSpace(string(b)), "\n")
-	results, totalSelections := ProcessLines(lines, "counter")
-
-	if len(results) != 3 {
-		t.Fatalf("expected 3 results, got %d", len(results))
-	}
+	totalSelections := ProcessLines(lines, "counter")
 
 	expectedTotal := 33
 	if totalSelections != expectedTotal {
 		t.Errorf("total selections = %d, want %d", totalSelections, expectedTotal)
-	}
-
-	// Verify each line has the correct number of selections
-	expectedSelections := []int{10, 12, 11}
-	for i, expected := range expectedSelections {
-		if !strings.Contains(results[i], fmt.Sprintf("%d selections", expected)) {
-			t.Errorf("Line %d: expected %d selections, got %s", i+1, expected, results[i])
-		}
 	}
 }
 

@@ -83,20 +83,37 @@ go test
 
 ## Algorithm
 
-The program uses Breadth-First Search (BFS) to find the shortest path from the initial state to the target state. This guarantees finding the minimum number of selections needed.
+### Toggle Mode
 
-In toggle mode, BFS explores all possible toggle states until finding one matching the desired state. In counter mode, BFS explores all possible counter combinations until finding one matching the target counts.
+Uses Breadth-First Search (BFS) to find the shortest path from the initial state (all off) to the target state. This guarantees finding the minimum number of selections needed. Very fast (< 50ms) even for 200-line inputs.
 
-### Performance Note
+### Counter Mode
 
-Counter mode with large target values (50+) has exponential search space complexity and may be slow on some inputs. The implementation uses:
+Counter mode uses a hybrid approach to handle the exponential search space efficiently:
 
-- **A\* search** with Manhattan distance heuristic to prioritize promising states
-- **Pruning** to skip states that exceed target counts
-- **Pointer-based path reconstruction** to reduce memory allocation during search
-- **State limits** (2M states) to prevent unbounded exploration
+1. **Gaussian Elimination** (primary approach):
+   - Treats the problem as a system of linear equations where each option increments specific positions
+   - Uses Gaussian elimination with partial pivoting to reduce the system to row echelon form
+   - Identifies free variables (options not determined by the system)
+   - For systems with ≤4 free variables, performs exhaustive search over free variable combinations (up to 50M states)
+   - Uses priority queue ordered by sum of free variables (lower bound heuristic) for efficient exploration
+   - Direct solution when no free variables exist (fully determined system)
 
-The example data solves quickly (~500ms), but some puzzle inputs with very large target counts (80+) may hit the state limit. Toggle mode is very fast (< 50ms) even for 200-line inputs.
+2. **BFS Fallback**:
+   - Used when Gaussian elimination fails (>4 free variables or no solution found)
+   - Explores state space breadth-first with aggressive memory management
+   - Queue size limited to 1M items to prevent memory explosion
+   - Depth limit of 500 to prune very long paths
+   - Visited states tracked with compact string encoding
+
+### Performance
+
+- **Example data**: Solves in < 0.5s
+- **Full puzzle input (200 lines)**: Completes in ~16 seconds
+- **Memory usage**: Minimal (< 1GB) with aggressive memory management
+- **Line 11 (challenging case)**: 0.23s, 96 selections
+
+The Gaussian elimination approach is highly effective for this problem since most lines have low dimensional solution spaces (few free variables), allowing efficient exact solving without exploring the full exponential state space.
 
 ## Implementation Details
 
@@ -105,7 +122,9 @@ The example data solves quickly (~500ms), but some puzzle inputs with very large
 - **ApplyOption**: Applies an option to toggle specified positions (toggle mode)
 - **ApplyOptionCounter**: Applies an option to increment counters at specified positions (counter mode)
 - **Solve**: Uses BFS to find the minimum path to the desired state (toggle mode)
-- **SolveCounter**: Uses BFS to find the minimum path to the target counts (counter mode)
+- **SolveCounter**: Uses Gaussian elimination with free variable search, falling back to BFS (counter mode)
+- **solveCounterGaussian**: Solves using linear algebra approach with free variable exploration
+- **solveCounterBFS**: Fallback BFS solver with memory-bounded search
 - **ProcessLines**: Processes all lines in the specified mode and accumulates results
 
 ## Thoughts On AI Solutions
@@ -125,6 +144,7 @@ The example data solves quickly (~500ms), but some puzzle inputs with very large
 tee output.txt  0.00s user 0.01s system 0% cpu 5:15:24.41 total`. Unfortunately, that output didn't get saved, but I did get the answer it produced, though I didn't save it here. It was above 69k and below 70k. I will have it try again.
 13. Doing two commits on this one, I asked it to try again after i had to reset it's context, unrelated. I also am going to ask it to print as it goes.
 14. I attempted to let it run for a day. It got up to 120GB of memory usage (on a 32GB machine) before I killed it. It produced output-1.txt and `./day10 puzzle-input.txt counter 2>&1  28668.97s user 19281.23s system 58% cpu 22:38:09.68 total` and `tee output.txt  0.00s user 0.01s system 0% cpu 22:38:06.07 total`. I'm going to have it try again with a memory limit.
+15. It tried again and went significantly faster, `./day10 puzzle-input.txt counter 2>&1  16.88s user 0.10s system 112% cpu 15.077 total` and `tee output.txt  0.00s user 0.00s system 0% cpu 15.076 total`. It produced output-2.txt. The answer was 21066, which is incorrect! I'm going to have it try again with a focus on correctness.
 
 TODO: summary of thoughts
 

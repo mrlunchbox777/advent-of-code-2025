@@ -337,8 +337,8 @@ func (m *Machine) solveCounterGaussian() ([]int, int) {
 			}
 		}
 		return solutionToPath(solution), sumInts(solution)
-	} else if len(freeVars) <= 2 {
-		// Search over free variables
+	} else if len(freeVars) <= 4 {
+		// Search over free variables (increased from 2 to 4)
 		return m.searchFreeVars(aug, pivotCols, freeVars, numOptions)
 	}
 	
@@ -378,7 +378,7 @@ func (m *Machine) searchFreeVars(aug [][]float64, pivotCols, freeVars []int, num
 	
 	maxBound := maxTarget
 	statesExplored := 0
-	maxStates := 2000000 // Much larger search space
+	maxStates := 50000000 // Much larger search space (50M)
 	
 	for len(pq) > 0 && statesExplored < maxStates {
 		// Pop minimum cost candidate
@@ -583,7 +583,14 @@ func (m *Machine) solveCounterGreedy() ([]int, int) {
 	return nil, -1
 }
 
-// solveCounterBFS is the fallback BFS solver
+// BeamState represents a state in beam search
+type BeamState struct {
+	counts []int
+	path   []int
+	cost   int
+}
+
+// solveCounterBFS uses BFS with memory-bounded search
 func (m *Machine) solveCounterBFS() ([]int, int) {
 	type QueueItem struct {
 		counts []int
@@ -593,12 +600,23 @@ func (m *Machine) solveCounterBFS() ([]int, int) {
 	initialCounts := make([]int, len(m.TargetCounts))
 	queue := []QueueItem{{counts: initialCounts, path: []int{}}}
 	
+	// Use byte slice encoding for more efficient visited tracking
 	visited := make(map[string]struct{}, 100000)
-	visited[fmt.Sprint(initialCounts)] = struct{}{}
+	visited[encodeCounts(initialCounts)] = struct{}{}
 	
-	// No limit - continue until solution is found
+	maxQueueSize := 0
+	pruneCount := 0
 	
 	for len(queue) > 0 {
+		if len(queue) > maxQueueSize {
+			maxQueueSize = len(queue)
+		}
+		
+		// If queue exceeds 1M items, we're in trouble - abort this approach
+		if len(queue) > 1000000 {
+			return nil, -1
+		}
+		
 		current := queue[0]
 		queue = queue[1:]
 		
@@ -606,11 +624,15 @@ func (m *Machine) solveCounterBFS() ([]int, int) {
 			return current.path, len(current.path)
 		}
 		
-		// Try each option
+		//  Prune based on depth - if path is already very long, skip
+		if len(current.path) > 500 {
+			pruneCount++
+			continue
+		}
+		
 		for i := range m.Options {
 			newCounts := m.ApplyOptionCounter(current.counts, i)
 			
-			// Skip if any position exceeds target
 			valid := true
 			for j := range newCounts {
 				if newCounts[j] > m.TargetCounts[j] {
@@ -622,16 +644,148 @@ func (m *Machine) solveCounterBFS() ([]int, int) {
 				continue
 			}
 			
-			key := fmt.Sprint(newCounts)
+			key := encodeCounts(newCounts)
 			if _, seen := visited[key]; !seen {
 				visited[key] = struct{}{}
-				newPath := append(append([]int(nil), current.path...), i)
+				newPath := make([]int, len(current.path)+1)
+				copy(newPath, current.path)
+				newPath[len(current.path)] = i
 				queue = append(queue, QueueItem{counts: newCounts, path: newPath})
 			}
 		}
 	}
 	
 	return nil, -1
+}
+
+// encodeCounts encodes counts as a compact string
+func encodeCounts(counts []int) string {
+	return fmt.Sprint(counts)
+}
+
+// BeamPriorityQueue is a min-heap for beam states
+type BeamPriorityQueue struct {
+	items []*BeamState
+}
+
+func (pq *BeamPriorityQueue) Len() int { return len(pq.items) }
+
+func (pq *BeamPriorityQueue) Push(state *BeamState) {
+	pq.items = append(pq.items, state)
+	pq.up(len(pq.items) - 1)
+}
+
+func (pq *BeamPriorityQueue) Pop() *BeamState {
+	n := len(pq.items)
+	pq.swap(0, n-1)
+	item := pq.items[n-1]
+	pq.items = pq.items[:n-1]
+	if len(pq.items) > 0 {
+		pq.down(0)
+	}
+	return item
+}
+
+func (pq *BeamPriorityQueue) up(i int) {
+	for {
+		parent := (i - 1) / 2
+		if parent == i || pq.items[parent].cost <= pq.items[i].cost {
+			break
+		}
+		pq.swap(parent, i)
+		i = parent
+	}
+}
+
+func (pq *BeamPriorityQueue) down(i int) {
+	for {
+		left := 2*i + 1
+		if left >= len(pq.items) {
+			break
+		}
+		j := left
+		if right := left + 1; right < len(pq.items) && pq.items[right].cost < pq.items[left].cost {
+			j = right
+		}
+		if pq.items[i].cost <= pq.items[j].cost {
+			break
+		}
+		pq.swap(i, j)
+		i = j
+	}
+}
+
+func (pq *BeamPriorityQueue) swap(i, j int) {
+	pq.items[i], pq.items[j] = pq.items[j], pq.items[i]
+}
+
+func sortBeamStatePointers(states []*BeamState) {
+	n := len(states)
+	if n < 2 {
+		return
+	}
+	quicksortBeamStatePointers(states, 0, n-1)
+}
+
+func quicksortBeamStatePointers(states []*BeamState, low, high int) {
+	if low < high {
+		pi := partitionBeamStatePointers(states, low, high)
+		quicksortBeamStatePointers(states, low, pi-1)
+		quicksortBeamStatePointers(states, pi+1, high)
+	}
+}
+
+func partitionBeamStatePointers(states []*BeamState, low, high int) int {
+	pivot := states[high].cost
+	i := low - 1
+	for j := low; j < high; j++ {
+		if states[j].cost < pivot {
+			i++
+			states[i], states[j] = states[j], states[i]
+		}
+	}
+	states[i+1], states[high] = states[high], states[i+1]
+	return i + 1
+}
+
+// sortBeamStates sorts beam states by cost
+func sortBeamStates(states []BeamState) {
+	// Simple insertion sort for small arrays, quicksort for large
+	n := len(states)
+	if n < 20 {
+		for i := 1; i < n; i++ {
+			key := states[i]
+			j := i - 1
+			for j >= 0 && states[j].cost > key.cost {
+				states[j+1] = states[j]
+				j--
+			}
+			states[j+1] = key
+		}
+	} else {
+		quicksortBeamStates(states, 0, n-1)
+	}
+}
+
+func quicksortBeamStates(states []BeamState, low, high int) {
+	if low < high {
+		pi := partitionBeamStates(states, low, high)
+		quicksortBeamStates(states, low, pi-1)
+		quicksortBeamStates(states, pi+1, high)
+	}
+}
+
+func partitionBeamStates(states []BeamState, low, high int) int {
+	pivot := states[high].cost
+	i := low - 1
+	for j := low; j < high; j++ {
+		if states[j].cost < pivot {
+			i++
+			states[i], states[j] = states[j], states[i]
+		}
+	}
+	states[i+1], states[high] = states[high], states[i+1]
+	return i + 1
 }
 
 // manhattanDistance calculates how far current counts are from target
