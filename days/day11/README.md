@@ -172,7 +172,9 @@ The critical optimization was computing reachability maps ONLY for the required 
 - Use `--count-only` flag to only count paths without storing them (for large result sets)
 - Omit flag to see all individual paths (memory scales with path count)
 
-The algorithm provides 100% accuracy and completeness - finding ALL valid paths within the depth limit (50 steps). For graphs where billions of valid paths exist, computation time can be substantial (30+ minutes) but memory remains constant at ~1.1MB.
+The algorithm provides 100% accuracy and completeness - finding ALL valid paths within the depth limit (50 steps). 
+
+**Note**: For the specific puzzle input with 589 nodes, the number of valid paths appears to be in the billions or trillions, making complete enumeration impractical (hours to days of computation time). The memory remains constant at ~1.1MB throughout. This is an inherent limitation of the "find all paths" problem on very dense graphs, which is #P-complete.
 
 ## Thoughts On AI Solutions
 
