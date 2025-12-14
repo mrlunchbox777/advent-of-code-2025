@@ -97,6 +97,7 @@ The program uses Depth-First Search (DFS) with backtracking to find all unique p
 ## Thoughts On AI Solutions
 
 1. The AI understood the requirements and generated a complete solution, that got the correct answer for the example-data.2. I tested the solution against the puzzle input and it worked correctly.
+2. The solution got the correct answer for the puzzle input on the first try.
 
 TODO: add more details after I finish the puzzle.
 
