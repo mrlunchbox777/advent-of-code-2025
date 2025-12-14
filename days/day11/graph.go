@@ -131,12 +131,14 @@ func (g *Graph) FindPathsWithRequiredNodes(start, end string, required []string)
 	
 	var allPaths []Path
 	visited := make(map[string]bool)
-	currentPath := make([]string, 0, 50)
+	currentPath := make([]string, 0, 100) // Pre-allocate larger size
 	requiredVisited := make(map[string]bool)
 	
 	maxDepth := 50
+	maxPaths := 1000000 // Safety limit to prevent memory exhaustion
+	pathCount := 0
 	g.dfsWithPruning(start, end, requiredSet, required, visited, currentPath, requiredVisited, 
-		&allPaths, canReachEnd, canReachFromStart, canReachFromNode, 0, maxDepth)
+		&allPaths, &pathCount, maxPaths, canReachEnd, canReachFromStart, canReachFromNode, 0, maxDepth)
 	
 	return allPaths
 }
@@ -190,15 +192,21 @@ func (g *Graph) computeReachability(target string, reverse bool) map[string]bool
 // dfsWithPruning performs DFS with aggressive dead-end pruning
 func (g *Graph) dfsWithPruning(current, end string, requiredSet map[string]bool, required []string,
 	visited map[string]bool, currentPath []string, requiredVisited map[string]bool,
-	allPaths *[]Path, canReachEnd, canReachFromStart map[string]bool, 
+	allPaths *[]Path, pathCount *int, maxPaths int, canReachEnd, canReachFromStart map[string]bool, 
 	canReachFromNode map[string]map[string]bool, depth, maxDepth int) {
+	
+	// Path count limit to prevent memory exhaustion
+	if *pathCount >= maxPaths {
+		return
+	}
 	
 	// Depth limit
 	if depth > maxDepth {
 		return
 	}
 	
-	// Add current to path
+	// Store current path length to avoid allocating new slice
+	pathLen := len(currentPath)
 	currentPath = append(currentPath, current)
 	visited[current] = true
 	
@@ -215,6 +223,7 @@ func (g *Graph) dfsWithPruning(current, end string, requiredSet map[string]bool,
 			pathCopy := make(Path, len(currentPath))
 			copy(pathCopy, currentPath)
 			*allPaths = append(*allPaths, pathCopy)
+			*pathCount++
 		}
 	} else {
 		// Continue exploring neighbors
@@ -252,12 +261,13 @@ func (g *Graph) dfsWithPruning(current, end string, requiredSet map[string]bool,
 				}
 				
 				g.dfsWithPruning(neighbor, end, requiredSet, required, visited, currentPath, 
-					requiredVisited, allPaths, canReachEnd, canReachFromStart, canReachFromNode, depth+1, maxDepth)
+					requiredVisited, allPaths, pathCount, maxPaths, canReachEnd, canReachFromStart, canReachFromNode, depth+1, maxDepth)
 			}
 		}
 	}
 	
-	// Backtrack
+	// Backtrack - reuse the slice by truncating instead of creating new slices
+	currentPath = currentPath[:pathLen]
 	visited[current] = false
 	if wasRequired {
 		requiredVisited[current] = false
