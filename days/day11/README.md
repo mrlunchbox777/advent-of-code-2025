@@ -135,6 +135,7 @@ The program uses Depth-First Search (DFS) with backtracking to find all unique p
 1. The AI understood the requirements and generated a complete solution, that got the correct answer for the example-data.2. I tested the solution against the puzzle input and it worked correctly.
 2. The solution got the correct answer for the puzzle input on the first try.
 3. The AI understood the problem for part 2 and modified the solution appropriately.
+4. The solution for part 2 was too slow for the puzzle input. I informed the AI of this and that it needed to handle up to 600 nodes with up to 30 connections each, and asked it to optimize the solution.
 
 TODO: add more details after I finish the puzzle.
 
