@@ -132,14 +132,15 @@ The program uses Depth-First Search (DFS) with backtracking to find all unique p
 
 ## Performance Optimizations
 
-For large graphs (>500 nodes), the algorithm implements several optimizations to prevent excessive memory usage and computation time:
+The algorithm uses **BFS (Breadth-First Search)** with state deduplication to find all paths systematically:
 
-- **Depth limiting**: Limits path exploration to prevent searching paths that are too long (max depth: 15 for large graphs, 25 for smaller graphs)
-- **Path count limiting**: Stops after finding 100,000 paths to prevent memory issues
-- **Required node tracking**: Tracks which required nodes have been visited during traversal (O(1) instead of O(n) check)
-- **Early termination**: Stops exploring branches once path limits are reached
+- **State deduplication**: Tracks (node, required_nodes_visited) combinations and prunes paths that reach the same state with longer paths
+- **Depth limiting**: Limits path exploration to prevent searching excessively long paths (max depth: 40)
+- **Queue size limiting**: Stops if queue exceeds 100 million states to prevent memory exhaustion
+- **Required node tracking**: Tracks which required nodes have been visited during traversal
+- **Early termination**: Stops exploring branches that exceed the maximum depth
 
-These optimizations ensure the algorithm completes in reasonable time even on dense graphs with hundreds of nodes and tens of connections per node.
+For very large and dense graphs (500+ nodes with many connections), pathfinding can take several minutes to complete. The algorithm prioritizes correctness over speed, ensuring all valid paths are found within the depth limit.
 
 ## Thoughts On AI Solutions
 
@@ -148,6 +149,7 @@ These optimizations ensure the algorithm completes in reasonable time even on de
 3. The AI understood the problem for part 2 and modified the solution appropriately.
 4. The solution for part 2 was too slow for the puzzle input. I informed the AI of this and that it needed to handle up to 600 nodes with up to 30 connections each, and asked it to optimize the solution.
 5. The AI did some optimization, but just gave up after focusing on depth limiting. I'm going to ask it again and to consider some of the optimizations it made in day 10.
+6. It was still too slow and gave up again. I think using the day10 optimizations is the wrong approach. I think it should use DFS with memorization and find dead branches before trying to explore them.
 
 TODO: add more details after I finish the puzzle.
 

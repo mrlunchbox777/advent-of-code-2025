@@ -102,83 +102,134 @@ func (g *Graph) dfs(current, end string, visited map[string]bool, currentPath []
 
 // FindPathsWithRequiredNodes finds all paths from start to end that visit all required nodes
 func (g *Graph) FindPathsWithRequiredNodes(start, end string, required []string) []Path {
-	allPaths := make([]Path, 0, 1000)
-	visited := make(map[string]bool)
-	currentPath := make([]string, 0, 50)
-	requiredSet := make(map[string]bool, len(required))
-	requiredVisited := make(map[string]bool, len(required))
+	// Use BFS to find all paths systematically
+	type SearchState struct {
+		node            string
+		path            []string
+		visited         map[string]bool
+		requiredVisited map[string]bool
+	}
 	
+	requiredSet := make(map[string]bool, len(required))
 	for _, node := range required {
 		requiredSet[node] = true
-		requiredVisited[node] = false
-	}
-
-	// Limit max depth to prevent excessive search
-	maxDepth := 25
-	if len(g.Nodes) > 500 {
-		maxDepth = 15
 	}
 	
-	// Limit total paths to prevent memory issues
-	maxPaths := 100000
-
-	pathCount := 0
-	g.dfsWithRequired(start, end, visited, currentPath, requiredSet, requiredVisited, 0, 0, maxDepth, &allPaths, &pathCount, maxPaths)
-
+	initialVisited := make(map[string]bool)
+	initialVisited[start] = true
+	initialRequired := make(map[string]bool)
+	if requiredSet[start] {
+		initialRequired[start] = true
+	}
+	
+	queue := []SearchState{{
+		node:            start,
+		path:            []string{start},
+		visited:         initialVisited,
+		requiredVisited: initialRequired,
+	}}
+	
+	var allPaths []Path
+	
+	// Track best depth seen for each (node, required_visited) to prune inefficient paths
+	// We only care about which required nodes have been visited, not the full path
+	type StateKey string
+	bestDepth := make(map[StateKey]int)
+	
+	maxDepth := 40 // Reasonable limit to prevent infinite search  
+	maxQueueSize := 100000000 // Limit queue size to prevent memory exhaustion
+	
+	for len(queue) > 0 {
+		// Memory safety
+		if len(queue) > maxQueueSize {
+			// Queue is too large, abort
+			return allPaths
+		}
+		current := queue[0]
+		queue = queue[1:]
+		
+		currentDepth := len(current.path)
+		
+		// Depth limit
+		if currentDepth > maxDepth {
+			continue
+		}
+		
+		// Check if we reached the end
+		if current.node == end {
+			// Check if all required nodes were visited
+			if len(current.requiredVisited) == len(required) {
+				pathCopy := make(Path, len(current.path))
+				copy(pathCopy, current.path)
+				allPaths = append(allPaths, pathCopy)
+			}
+			continue
+		}
+		
+		// Explore neighbors
+		node, exists := g.Nodes[current.node]
+		if !exists {
+			continue
+		}
+		
+		for _, neighbor := range node.Connections {
+			if current.visited[neighbor] {
+				continue
+			}
+			
+			// Create new state for this neighbor
+			newVisited := make(map[string]bool, len(current.visited)+1)
+			for k, v := range current.visited {
+				newVisited[k] = v
+			}
+			newVisited[neighbor] = true
+			
+			newRequired := make(map[string]bool, len(current.requiredVisited))
+			for k, v := range current.requiredVisited {
+				newRequired[k] = v
+			}
+			if requiredSet[neighbor] {
+				newRequired[neighbor] = true
+			}
+			
+			// Create state key for pruning - only use node and required nodes visited
+			stateKey := StateKey(neighbor + "|" + encodeRequired(newRequired))
+			
+			// Only continue if this is a better or equal path to this state
+			if prevDepth, seen := bestDepth[stateKey]; seen && currentDepth+1 > prevDepth {
+				continue
+			}
+			bestDepth[stateKey] = currentDepth + 1
+			
+			newPath := make([]string, len(current.path)+1)
+			copy(newPath, current.path)
+			newPath[len(current.path)] = neighbor
+			
+			queue = append(queue, SearchState{
+				node:            neighbor,
+				path:            newPath,
+				visited:         newVisited,
+				requiredVisited: newRequired,
+			})
+		}
+	}
+	
 	return allPaths
 }
 
-// dfsWithRequired performs DFS to find paths that visit all required nodes
-func (g *Graph) dfsWithRequired(current, end string, visited map[string]bool, currentPath []string, 
-	required map[string]bool, requiredVisited map[string]bool, requiredCount int, depth int, maxDepth int, 
-	allPaths *[]Path, pathCount *int, maxPaths int) {
-	
-	// Stop if we've found enough paths
-	if *pathCount >= maxPaths {
-		return
+// encodeRequired creates a string key from required nodes visited
+func encodeRequired(required map[string]bool) string {
+	// Create a sorted list of required nodes for consistent encoding
+	nodes := make([]string, 0, len(required))
+	for node := range required {
+		nodes = append(nodes, node)
 	}
-	
-	// Depth limit to prevent excessive recursion
-	if depth > maxDepth {
-		return
-	}
-
-	// Add current node to path
-	currentPath = append(currentPath, current)
-	visited[current] = true
-
-	// Track if this node is a required node we haven't visited yet
-	wasRequired := false
-	if required[current] && !requiredVisited[current] {
-		requiredVisited[current] = true
-		requiredCount++
-		wasRequired = true
-	}
-
-	// If we reached the end, check if all required nodes were visited
-	if current == end {
-		if requiredCount == len(required) {
-			// Make a copy of the path
-			pathCopy := make(Path, len(currentPath))
-			copy(pathCopy, currentPath)
-			*allPaths = append(*allPaths, pathCopy)
-			*pathCount++
-		}
-	} else {
-		// Continue searching from neighbors
-		node, exists := g.Nodes[current]
-		if exists {
-			for _, neighbor := range node.Connections {
-				if !visited[neighbor] && *pathCount < maxPaths {
-					g.dfsWithRequired(neighbor, end, visited, currentPath, required, requiredVisited, requiredCount, depth+1, maxDepth, allPaths, pathCount, maxPaths)
-				}
-			}
-		}
-	}
-
-	// Backtrack
-	visited[current] = false
-	if wasRequired {
-		requiredVisited[current] = false
-	}
+	return fmt.Sprint(nodes)
 }
+
+// encodeVisited creates a compact string key from visited nodes
+func encodeVisited(visited map[string]bool) string {
+	return fmt.Sprint(visited)
+}
+
+
