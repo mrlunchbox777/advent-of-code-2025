@@ -99,3 +99,63 @@ func (g *Graph) dfs(current, end string, visited map[string]bool, currentPath []
 	// Backtrack
 	visited[current] = false
 }
+
+// FindPathsWithRequiredNodes finds all paths from start to end that visit all required nodes
+func (g *Graph) FindPathsWithRequiredNodes(start, end string, required []string) []Path {
+	var allPaths []Path
+	visited := make(map[string]bool)
+	currentPath := []string{}
+	requiredSet := make(map[string]bool)
+	for _, node := range required {
+		requiredSet[node] = true
+	}
+
+	g.dfsWithRequired(start, end, visited, currentPath, requiredSet, &allPaths)
+
+	return allPaths
+}
+
+// dfsWithRequired performs DFS to find paths that visit all required nodes
+func (g *Graph) dfsWithRequired(current, end string, visited map[string]bool, currentPath []string, required map[string]bool, allPaths *[]Path) {
+	// Add current node to path
+	currentPath = append(currentPath, current)
+	visited[current] = true
+
+	// If we reached the end, check if all required nodes were visited
+	if current == end {
+		allVisited := true
+		for reqNode := range required {
+			found := false
+			for _, node := range currentPath {
+				if node == reqNode {
+					found = true
+					break
+				}
+			}
+			if !found {
+				allVisited = false
+				break
+			}
+		}
+		
+		if allVisited {
+			// Make a copy of the path
+			pathCopy := make(Path, len(currentPath))
+			copy(pathCopy, currentPath)
+			*allPaths = append(*allPaths, pathCopy)
+		}
+	} else {
+		// Continue searching from neighbors
+		node, exists := g.Nodes[current]
+		if exists {
+			for _, neighbor := range node.Connections {
+				if !visited[neighbor] {
+					g.dfsWithRequired(neighbor, end, visited, currentPath, required, allPaths)
+				}
+			}
+		}
+	}
+
+	// Backtrack
+	visited[current] = false
+}

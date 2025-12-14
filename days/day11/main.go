@@ -9,11 +9,18 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %s <path-to-input-file>\n", filepath.Base(os.Args[0]))
+	if len(os.Args) != 3 {
+		fmt.Fprintf(os.Stderr, "Usage: %s <path-to-input-file> <mode>\n", filepath.Base(os.Args[0]))
+		fmt.Fprintf(os.Stderr, "  mode: 'all' or 'must-visit'\n")
 		os.Exit(2)
 	}
 	path := os.Args[1]
+	mode := os.Args[2]
+	if mode != "all" && mode != "must-visit" {
+		fmt.Fprintf(os.Stderr, "Invalid mode %q. Must be 'all' or 'must-visit'\n", mode)
+		os.Exit(2)
+	}
+
 	f, err := os.Open(path)
 	if err != nil {
 		log.Fatalf("failed to open file: %v", err)
@@ -35,7 +42,12 @@ func main() {
 		log.Fatalf("parse error: %v", err)
 	}
 
-	paths := graph.FindAllPaths("you", "out")
+	var paths []Path
+	if mode == "all" {
+		paths = graph.FindAllPaths("you", "out")
+	} else {
+		paths = graph.FindPathsWithRequiredNodes("svr", "out", []string{"dac", "fft"})
+	}
 	
 	for _, path := range paths {
 		fmt.Println(path.String())

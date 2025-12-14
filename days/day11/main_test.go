@@ -85,7 +85,7 @@ func TestFindAllPathsMultiple(t *testing.T) {
 	}
 }
 
-func TestProcessExampleData(t *testing.T) {
+func TestProcessExampleDataAllMode(t *testing.T) {
 	p := filepath.Join(".", "example-data.txt")
 	b, err := os.ReadFile(p)
 	if err != nil {
@@ -134,5 +134,106 @@ func TestEmptyConnections(t *testing.T) {
 	}
 	if len(bbb.Connections) != 0 {
 		t.Errorf("Expected 'bbb' to have 0 connections, got %d", len(bbb.Connections))
+	}
+}
+
+func TestFindPathsWithRequiredNodes(t *testing.T) {
+	lines := []string{
+		"start: aaa bbb",
+		"aaa: req1",
+		"bbb: req1",
+		"req1: req2",
+		"req2: end",
+	}
+
+	graph, err := ParseGraph(lines)
+	if err != nil {
+		t.Fatalf("ParseGraph() error = %v", err)
+	}
+
+	paths := graph.FindPathsWithRequiredNodes("start", "end", []string{"req1", "req2"})
+
+	expectedCount := 2
+	if len(paths) != expectedCount {
+		t.Errorf("Expected %d paths, got %d", expectedCount, len(paths))
+		for i, path := range paths {
+			t.Logf("Path %d: %s", i+1, path.String())
+		}
+	}
+
+	// Verify both required nodes are in each path
+	for _, path := range paths {
+		hasReq1 := false
+		hasReq2 := false
+		for _, node := range path {
+			if node == "req1" {
+				hasReq1 = true
+			}
+			if node == "req2" {
+				hasReq2 = true
+			}
+		}
+		if !hasReq1 || !hasReq2 {
+			t.Errorf("Path %s missing required nodes", path.String())
+		}
+	}
+}
+
+func TestFindPathsWithRequiredNodesNoMatch(t *testing.T) {
+	lines := []string{
+		"start: aaa",
+		"aaa: end",
+	}
+
+	graph, err := ParseGraph(lines)
+	if err != nil {
+		t.Fatalf("ParseGraph() error = %v", err)
+	}
+
+	paths := graph.FindPathsWithRequiredNodes("start", "end", []string{"missing"})
+
+	if len(paths) != 0 {
+		t.Errorf("Expected 0 paths, got %d", len(paths))
+	}
+}
+
+func TestProcessExampleData2MustVisitMode(t *testing.T) {
+	p := filepath.Join(".", "example-data-2.txt")
+	b, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatalf("failed to read example data: %v", err)
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(b)), "\n")
+	graph, err := ParseGraph(lines)
+	if err != nil {
+		t.Fatalf("ParseGraph() error = %v", err)
+	}
+
+	paths := graph.FindPathsWithRequiredNodes("svr", "out", []string{"dac", "fft"})
+
+	expectedCount := 2
+	if len(paths) != expectedCount {
+		t.Errorf("Expected %d paths, got %d", expectedCount, len(paths))
+		for i, path := range paths {
+			t.Logf("Path %d: %s", i+1, path.String())
+		}
+	}
+
+	// Verify all paths contain both required nodes
+	for _, path := range paths {
+		hasDac := false
+		hasFft := false
+		for _, node := range path {
+			if node == "dac" {
+				hasDac = true
+			}
+			if node == "fft" {
+				hasFft = true
+			}
+		}
+		if !hasDac || !hasFft {
+			t.Errorf("Path %s missing required nodes (dac and/or fft)", path.String())
+		}
 	}
 }
