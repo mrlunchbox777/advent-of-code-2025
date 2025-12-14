@@ -9,9 +9,10 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 3 {
-		fmt.Fprintf(os.Stderr, "Usage: %s <path-to-input-file> <mode>\n", filepath.Base(os.Args[0]))
+	if len(os.Args) < 3 {
+		fmt.Fprintf(os.Stderr, "Usage: %s <path-to-input-file> <mode> [--count-only]\n", filepath.Base(os.Args[0]))
 		fmt.Fprintf(os.Stderr, "  mode: 'all' or 'must-visit'\n")
+		fmt.Fprintf(os.Stderr, "  --count-only: (optional) Only print the total count, not individual paths\n")
 		os.Exit(2)
 	}
 	path := os.Args[1]
@@ -19,6 +20,11 @@ func main() {
 	if mode != "all" && mode != "must-visit" {
 		fmt.Fprintf(os.Stderr, "Invalid mode %q. Must be 'all' or 'must-visit'\n", mode)
 		os.Exit(2)
+	}
+
+	countOnly := false
+	if len(os.Args) >= 4 && os.Args[3] == "--count-only" {
+		countOnly = true
 	}
 
 	f, err := os.Open(path)
@@ -42,16 +48,28 @@ func main() {
 		log.Fatalf("parse error: %v", err)
 	}
 
-	var paths []Path
-	if mode == "all" {
-		paths = graph.FindAllPaths("you", "out")
+	var count int
+	if countOnly {
+		// Count-only mode: don't store paths, just count them
+		if mode == "all" {
+			count = graph.CountAllPaths("you", "out")
+		} else {
+			count = graph.CountPathsWithRequiredNodes("svr", "out", []string{"dac", "fft"})
+		}
+		fmt.Printf("Total unique paths: %d\n", count)
 	} else {
-		paths = graph.FindPathsWithRequiredNodes("svr", "out", []string{"dac", "fft"})
+		// Normal mode: find and print all paths
+		var paths []Path
+		if mode == "all" {
+			paths = graph.FindAllPaths("you", "out")
+		} else {
+			paths = graph.FindPathsWithRequiredNodes("svr", "out", []string{"dac", "fft"})
+		}
+		
+		for _, path := range paths {
+			fmt.Println(path.String())
+		}
+		
+		fmt.Printf("Total unique paths: %d\n", len(paths))
 	}
-	
-	for _, path := range paths {
-		fmt.Println(path.String())
-	}
-	
-	fmt.Printf("Total unique paths: %d\n", len(paths))
 }

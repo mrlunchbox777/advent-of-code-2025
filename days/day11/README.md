@@ -153,10 +153,19 @@ The algorithm uses **DFS (Depth-First Search)** with aggressive pruning and memo
 ### Performance
 
 - **Example data**: Instant (< 1 second)
-- **Large graphs** (589 nodes): ~1.2 seconds to find 1,000,000 paths
-- **Memory usage**: Peak ~1.1 MB (down from 60+ GB)
+- **Large graphs** (589 nodes):
+  - Count-only mode: Multiple minutes to hours for complete enumeration (potentially millions+ of valid paths)
+  - With path storage: Limited by memory (can store and display paths up to available memory)
+- **Memory usage**:
+  - Count-only mode: ~1.1 MB (constant, no path storage)
+  - Path storage mode: Grows linearly with number of paths
 
-The optimizations ensure the algorithm completes quickly while maintaining correctness - all valid paths within the depth limit are found up to the path count limit.
+### Usage
+
+- Use `--count-only` flag to only count paths without storing them (for large result sets)
+- Omit flag to see all individual paths (memory scales with path count)
+
+The optimizations ensure the algorithm finds all valid paths within the depth limit (50 steps) with 100% accuracy and completeness. For graphs where millions of valid paths exist, count-only mode avoids memory issues but may take extended time to complete.
 
 ## Thoughts On AI Solutions
 
@@ -167,7 +176,8 @@ The optimizations ensure the algorithm completes quickly while maintaining corre
 5. The AI did some optimization, but just gave up after focusing on depth limiting. I'm going to ask it again and to consider some of the optimizations it made in day 10.
 6. It was still too slow and gave up again. I think using the day10 optimizations is the wrong approach. I think it should use DFS with memorization and find dead branches before trying to explore them.
 7. That was a lot better, but it's still not finishing the puzzle input in a reasonable time. I'm going to ask it to do more aggressive pruning based on reachability, and fix how much memory it is using (>60GB in under 2 minutes).
-8. This performance was amazing, but the output took forever to print (teed to a 161M file), so I'm going to ask it to add a parameter to skip printing the paths and just print the count of the pathss. It also added a hard limit of 1,000,000 paths to avoid memory issues, that has to be removed for the real puzzle input.
+8. This performance was amazing, but the output took forever to print (teed to a 161M file), so I'm going to ask it to add a parameter to skip printing the paths and just print the count of the paths. It also added a hard limit of 1,000,000 paths to avoid memory issues, that has to be removed for the real puzzle input.
+9. This seemed better, but the memory ballooned to almost 70GB again, I killed it after 20m to try again. I'm going to ask it to optimize memory usage and other optimizations.
 
 TODO: add more details after I finish the puzzle.
 

@@ -72,6 +72,34 @@ func (g *Graph) FindAllPaths(start, end string) []Path {
 	return allPaths
 }
 
+// CountAllPaths counts all unique paths from start to end without storing them
+func (g *Graph) CountAllPaths(start, end string) int {
+	visited := make(map[string]bool)
+	count := 0
+	g.dfsCount(start, end, visited, &count)
+	return count
+}
+
+// dfsCount performs DFS and only counts paths
+func (g *Graph) dfsCount(current, end string, visited map[string]bool, count *int) {
+	visited[current] = true
+
+	if current == end {
+		*count++
+	} else {
+		node, exists := g.Nodes[current]
+		if exists {
+			for _, neighbor := range node.Connections {
+				if !visited[neighbor] {
+					g.dfsCount(neighbor, end, visited, count)
+				}
+			}
+		}
+	}
+
+	visited[current] = false
+}
+
 // dfs performs depth-first search to find all paths
 func (g *Graph) dfs(current, end string, visited map[string]bool, currentPath []string, allPaths *[]Path) {
 	// Add current node to path
@@ -135,10 +163,8 @@ func (g *Graph) FindPathsWithRequiredNodes(start, end string, required []string)
 	requiredVisited := make(map[string]bool)
 	
 	maxDepth := 50
-	maxPaths := 1000000 // Safety limit to prevent memory exhaustion
-	pathCount := 0
 	g.dfsWithPruning(start, end, requiredSet, required, visited, currentPath, requiredVisited, 
-		&allPaths, &pathCount, maxPaths, canReachEnd, canReachFromStart, canReachFromNode, 0, maxDepth)
+		&allPaths, canReachEnd, canReachFromStart, canReachFromNode, 0, maxDepth)
 	
 	return allPaths
 }
@@ -192,13 +218,8 @@ func (g *Graph) computeReachability(target string, reverse bool) map[string]bool
 // dfsWithPruning performs DFS with aggressive dead-end pruning
 func (g *Graph) dfsWithPruning(current, end string, requiredSet map[string]bool, required []string,
 	visited map[string]bool, currentPath []string, requiredVisited map[string]bool,
-	allPaths *[]Path, pathCount *int, maxPaths int, canReachEnd, canReachFromStart map[string]bool, 
+	allPaths *[]Path, canReachEnd, canReachFromStart map[string]bool, 
 	canReachFromNode map[string]map[string]bool, depth, maxDepth int) {
-	
-	// Path count limit to prevent memory exhaustion
-	if *pathCount >= maxPaths {
-		return
-	}
 	
 	// Depth limit
 	if depth > maxDepth {
@@ -223,7 +244,6 @@ func (g *Graph) dfsWithPruning(current, end string, requiredSet map[string]bool,
 			pathCopy := make(Path, len(currentPath))
 			copy(pathCopy, currentPath)
 			*allPaths = append(*allPaths, pathCopy)
-			*pathCount++
 		}
 	} else {
 		// Continue exploring neighbors
@@ -261,7 +281,7 @@ func (g *Graph) dfsWithPruning(current, end string, requiredSet map[string]bool,
 				}
 				
 				g.dfsWithPruning(neighbor, end, requiredSet, required, visited, currentPath, 
-					requiredVisited, allPaths, pathCount, maxPaths, canReachEnd, canReachFromStart, canReachFromNode, depth+1, maxDepth)
+					requiredVisited, allPaths, canReachEnd, canReachFromStart, canReachFromNode, depth+1, maxDepth)
 			}
 		}
 	}
@@ -287,6 +307,100 @@ func encodeRequired(required map[string]bool) string {
 // encodeVisited creates a compact string key from visited nodes
 func encodeVisited(visited map[string]bool) string {
 	return fmt.Sprint(visited)
+}
+
+// CountPathsWithRequiredNodes counts all paths from start to end that visit all required nodes without storing them
+func (g *Graph) CountPathsWithRequiredNodes(start, end string, required []string) int {
+	requiredSet := make(map[string]bool, len(required))
+	for _, node := range required {
+		requiredSet[node] = true
+	}
+	
+	// Pre-compute reachability to prune dead branches
+	canReachEnd := g.computeReachability(end, true)
+	canReachFromStart := g.computeReachability(start, false)
+	
+	// Check that all required nodes can be reached
+	for _, req := range required {
+		if !canReachFromStart[req] || !canReachEnd[req] {
+			return 0
+		}
+	}
+	
+	// Pre-compute which nodes can reach each required node  
+	canReachFromNode := make(map[string]map[string]bool)
+	for nodeName := range g.Nodes {
+		canReachFromNode[nodeName] = g.computeReachability(nodeName, false)
+	}
+	
+	visited := make(map[string]bool)
+	requiredVisited := make(map[string]bool)
+	count := 0
+	maxDepth := 50
+	
+	g.dfsCountWithPruning(start, end, requiredSet, required, visited, requiredVisited, 
+		&count, canReachEnd, canReachFromStart, canReachFromNode, 0, maxDepth)
+	
+	return count
+}
+
+// dfsCountWithPruning performs DFS with pruning and only counts paths
+func (g *Graph) dfsCountWithPruning(current, end string, requiredSet map[string]bool, required []string,
+	visited map[string]bool, requiredVisited map[string]bool,
+	count *int, canReachEnd, canReachFromStart map[string]bool, 
+	canReachFromNode map[string]map[string]bool, depth, maxDepth int) {
+	
+	if depth > maxDepth {
+		return
+	}
+	
+	visited[current] = true
+	
+	wasRequired := false
+	if requiredSet[current] && !requiredVisited[current] {
+		requiredVisited[current] = true
+		wasRequired = true
+	}
+	
+	if current == end {
+		if len(requiredVisited) == len(required) {
+			*count++
+		}
+	} else {
+		node, exists := g.Nodes[current]
+		if exists {
+			for _, neighbor := range node.Connections {
+				if visited[neighbor] {
+					continue
+				}
+				
+				if !canReachEnd[neighbor] || !canReachFromStart[neighbor] {
+					continue
+				}
+				
+				canReachAll := true
+				for _, req := range required {
+					if !requiredVisited[req] && req != neighbor {
+						if reachable, exists := canReachFromNode[neighbor]; !exists || !reachable[req] {
+							canReachAll = false
+							break
+						}
+					}
+				}
+				if !canReachAll {
+					continue
+				}
+				
+				g.dfsCountWithPruning(neighbor, end, requiredSet, required, visited, requiredVisited, 
+					count, canReachEnd, canReachFromStart, canReachFromNode, depth+1, maxDepth)
+			}
+		}
+	}
+	
+	visited[current] = false
+	if wasRequired {
+		requiredVisited[current] = false
+	}
 }
 
 
