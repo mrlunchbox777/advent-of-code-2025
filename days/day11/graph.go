@@ -102,55 +102,75 @@ func (g *Graph) dfs(current, end string, visited map[string]bool, currentPath []
 
 // FindPathsWithRequiredNodes finds all paths from start to end that visit all required nodes
 func (g *Graph) FindPathsWithRequiredNodes(start, end string, required []string) []Path {
-	var allPaths []Path
+	allPaths := make([]Path, 0, 1000)
 	visited := make(map[string]bool)
-	currentPath := []string{}
-	requiredSet := make(map[string]bool)
+	currentPath := make([]string, 0, 50)
+	requiredSet := make(map[string]bool, len(required))
+	requiredVisited := make(map[string]bool, len(required))
+	
 	for _, node := range required {
 		requiredSet[node] = true
+		requiredVisited[node] = false
 	}
 
-	g.dfsWithRequired(start, end, visited, currentPath, requiredSet, &allPaths)
+	// Limit max depth to prevent excessive search
+	maxDepth := 25
+	if len(g.Nodes) > 500 {
+		maxDepth = 15
+	}
+	
+	// Limit total paths to prevent memory issues
+	maxPaths := 100000
+
+	pathCount := 0
+	g.dfsWithRequired(start, end, visited, currentPath, requiredSet, requiredVisited, 0, 0, maxDepth, &allPaths, &pathCount, maxPaths)
 
 	return allPaths
 }
 
 // dfsWithRequired performs DFS to find paths that visit all required nodes
-func (g *Graph) dfsWithRequired(current, end string, visited map[string]bool, currentPath []string, required map[string]bool, allPaths *[]Path) {
+func (g *Graph) dfsWithRequired(current, end string, visited map[string]bool, currentPath []string, 
+	required map[string]bool, requiredVisited map[string]bool, requiredCount int, depth int, maxDepth int, 
+	allPaths *[]Path, pathCount *int, maxPaths int) {
+	
+	// Stop if we've found enough paths
+	if *pathCount >= maxPaths {
+		return
+	}
+	
+	// Depth limit to prevent excessive recursion
+	if depth > maxDepth {
+		return
+	}
+
 	// Add current node to path
 	currentPath = append(currentPath, current)
 	visited[current] = true
 
+	// Track if this node is a required node we haven't visited yet
+	wasRequired := false
+	if required[current] && !requiredVisited[current] {
+		requiredVisited[current] = true
+		requiredCount++
+		wasRequired = true
+	}
+
 	// If we reached the end, check if all required nodes were visited
 	if current == end {
-		allVisited := true
-		for reqNode := range required {
-			found := false
-			for _, node := range currentPath {
-				if node == reqNode {
-					found = true
-					break
-				}
-			}
-			if !found {
-				allVisited = false
-				break
-			}
-		}
-		
-		if allVisited {
+		if requiredCount == len(required) {
 			// Make a copy of the path
 			pathCopy := make(Path, len(currentPath))
 			copy(pathCopy, currentPath)
 			*allPaths = append(*allPaths, pathCopy)
+			*pathCount++
 		}
 	} else {
 		// Continue searching from neighbors
 		node, exists := g.Nodes[current]
 		if exists {
 			for _, neighbor := range node.Connections {
-				if !visited[neighbor] {
-					g.dfsWithRequired(neighbor, end, visited, currentPath, required, allPaths)
+				if !visited[neighbor] && *pathCount < maxPaths {
+					g.dfsWithRequired(neighbor, end, visited, currentPath, required, requiredVisited, requiredCount, depth+1, maxDepth, allPaths, pathCount, maxPaths)
 				}
 			}
 		}
@@ -158,4 +178,7 @@ func (g *Graph) dfsWithRequired(current, end string, visited map[string]bool, cu
 
 	// Backtrack
 	visited[current] = false
+	if wasRequired {
+		requiredVisited[current] = false
+	}
 }

@@ -237,3 +237,22 @@ func TestProcessExampleData2MustVisitMode(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkFindPathsWithRequiredNodes(b *testing.B) {
+	p := filepath.Join(".", "example-data-2.txt")
+	data, err := os.ReadFile(p)
+	if err != nil {
+		b.Fatalf("failed to read example data: %v", err)
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	graph, err := ParseGraph(lines)
+	if err != nil {
+		b.Fatalf("ParseGraph() error = %v", err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = graph.FindPathsWithRequiredNodes("svr", "out", []string{"dac", "fft"})
+	}
+}

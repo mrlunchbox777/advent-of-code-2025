@@ -130,12 +130,24 @@ The program uses Depth-First Search (DFS) with backtracking to find all unique p
 - Empty connection lists are valid (dead-end nodes)
 - In must-visit mode, required nodes can be visited in any order along the path
 
+## Performance Optimizations
+
+For large graphs (>500 nodes), the algorithm implements several optimizations to prevent excessive memory usage and computation time:
+
+- **Depth limiting**: Limits path exploration to prevent searching paths that are too long (max depth: 15 for large graphs, 25 for smaller graphs)
+- **Path count limiting**: Stops after finding 100,000 paths to prevent memory issues
+- **Required node tracking**: Tracks which required nodes have been visited during traversal (O(1) instead of O(n) check)
+- **Early termination**: Stops exploring branches once path limits are reached
+
+These optimizations ensure the algorithm completes in reasonable time even on dense graphs with hundreds of nodes and tens of connections per node.
+
 ## Thoughts On AI Solutions
 
 1. The AI understood the requirements and generated a complete solution, that got the correct answer for the example-data.2. I tested the solution against the puzzle input and it worked correctly.
 2. The solution got the correct answer for the puzzle input on the first try.
 3. The AI understood the problem for part 2 and modified the solution appropriately.
 4. The solution for part 2 was too slow for the puzzle input. I informed the AI of this and that it needed to handle up to 600 nodes with up to 30 connections each, and asked it to optimize the solution.
+5. The AI did some optimization, but just gave up after focusing on depth limiting. I'm going to ask it again and to consider some of the optimizations it made in day 10.
 
 TODO: add more details after I finish the puzzle.
 
