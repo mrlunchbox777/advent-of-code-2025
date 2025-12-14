@@ -102,119 +102,166 @@ func (g *Graph) dfs(current, end string, visited map[string]bool, currentPath []
 
 // FindPathsWithRequiredNodes finds all paths from start to end that visit all required nodes
 func (g *Graph) FindPathsWithRequiredNodes(start, end string, required []string) []Path {
-	// Use BFS to find all paths systematically
-	type SearchState struct {
-		node            string
-		path            []string
-		visited         map[string]bool
-		requiredVisited map[string]bool
-	}
-	
 	requiredSet := make(map[string]bool, len(required))
 	for _, node := range required {
 		requiredSet[node] = true
 	}
 	
-	initialVisited := make(map[string]bool)
-	initialVisited[start] = true
-	initialRequired := make(map[string]bool)
-	if requiredSet[start] {
-		initialRequired[start] = true
+	// Pre-compute reachability to prune dead branches
+	canReachEnd := g.computeReachability(end, true)    // Reverse: who can reach 'end'
+	canReachFromStart := g.computeReachability(start, false) // Forward: who can be reached from 'start'
+	
+	// Check that all required nodes can be reached
+	for _, req := range required {
+		if !canReachFromStart[req] {
+			// Can't reach a required node from start
+			return []Path{}
+		}
+		if !canReachEnd[req] {
+			// Required node can't reach end
+			return []Path{}
+		}
 	}
 	
-	queue := []SearchState{{
-		node:            start,
-		path:            []string{start},
-		visited:         initialVisited,
-		requiredVisited: initialRequired,
-	}}
+	// Pre-compute which nodes can reach each required node  
+	canReachFromNode := make(map[string]map[string]bool)
+	for nodeName := range g.Nodes {
+		canReachFromNode[nodeName] = g.computeReachability(nodeName, false)
+	}
 	
 	var allPaths []Path
+	visited := make(map[string]bool)
+	currentPath := make([]string, 0, 50)
+	requiredVisited := make(map[string]bool)
 	
-	// Track best depth seen for each (node, required_visited) to prune inefficient paths
-	// We only care about which required nodes have been visited, not the full path
-	type StateKey string
-	bestDepth := make(map[StateKey]int)
+	maxDepth := 50
+	g.dfsWithPruning(start, end, requiredSet, required, visited, currentPath, requiredVisited, 
+		&allPaths, canReachEnd, canReachFromStart, canReachFromNode, 0, maxDepth)
 	
-	maxDepth := 40 // Reasonable limit to prevent infinite search  
-	maxQueueSize := 100000000 // Limit queue size to prevent memory exhaustion
+	return allPaths
+}
+
+// computeReachability finds all nodes that can reach (reverse=true) or be reached from (reverse=false) a target node
+func (g *Graph) computeReachability(target string, reverse bool) map[string]bool {
+	reachable := make(map[string]bool)
+	visited := make(map[string]bool)
+	queue := []string{target}
+	reachable[target] = true
+	visited[target] = true
 	
 	for len(queue) > 0 {
-		// Memory safety
-		if len(queue) > maxQueueSize {
-			// Queue is too large, abort
-			return allPaths
-		}
 		current := queue[0]
 		queue = queue[1:]
 		
-		currentDepth := len(current.path)
-		
-		// Depth limit
-		if currentDepth > maxDepth {
-			continue
-		}
-		
-		// Check if we reached the end
-		if current.node == end {
-			// Check if all required nodes were visited
-			if len(current.requiredVisited) == len(required) {
-				pathCopy := make(Path, len(current.path))
-				copy(pathCopy, current.path)
-				allPaths = append(allPaths, pathCopy)
+		if reverse {
+			// Find nodes that can reach current (look at who points to current)
+			for nodeName, node := range g.Nodes {
+				if visited[nodeName] {
+					continue
+				}
+				for _, conn := range node.Connections {
+					if conn == current {
+						reachable[nodeName] = true
+						visited[nodeName] = true
+						queue = append(queue, nodeName)
+						break
+					}
+				}
 			}
-			continue
-		}
-		
-		// Explore neighbors
-		node, exists := g.Nodes[current.node]
-		if !exists {
-			continue
-		}
-		
-		for _, neighbor := range node.Connections {
-			if current.visited[neighbor] {
+		} else {
+			// Find nodes that current can reach (forward search)
+			node, exists := g.Nodes[current]
+			if !exists {
 				continue
 			}
-			
-			// Create new state for this neighbor
-			newVisited := make(map[string]bool, len(current.visited)+1)
-			for k, v := range current.visited {
-				newVisited[k] = v
+			for _, neighbor := range node.Connections {
+				if !visited[neighbor] {
+					reachable[neighbor] = true
+					visited[neighbor] = true
+					queue = append(queue, neighbor)
+				}
 			}
-			newVisited[neighbor] = true
-			
-			newRequired := make(map[string]bool, len(current.requiredVisited))
-			for k, v := range current.requiredVisited {
-				newRequired[k] = v
-			}
-			if requiredSet[neighbor] {
-				newRequired[neighbor] = true
-			}
-			
-			// Create state key for pruning - only use node and required nodes visited
-			stateKey := StateKey(neighbor + "|" + encodeRequired(newRequired))
-			
-			// Only continue if this is a better or equal path to this state
-			if prevDepth, seen := bestDepth[stateKey]; seen && currentDepth+1 > prevDepth {
-				continue
-			}
-			bestDepth[stateKey] = currentDepth + 1
-			
-			newPath := make([]string, len(current.path)+1)
-			copy(newPath, current.path)
-			newPath[len(current.path)] = neighbor
-			
-			queue = append(queue, SearchState{
-				node:            neighbor,
-				path:            newPath,
-				visited:         newVisited,
-				requiredVisited: newRequired,
-			})
 		}
 	}
 	
-	return allPaths
+	return reachable
+}
+
+// dfsWithPruning performs DFS with aggressive dead-end pruning
+func (g *Graph) dfsWithPruning(current, end string, requiredSet map[string]bool, required []string,
+	visited map[string]bool, currentPath []string, requiredVisited map[string]bool,
+	allPaths *[]Path, canReachEnd, canReachFromStart map[string]bool, 
+	canReachFromNode map[string]map[string]bool, depth, maxDepth int) {
+	
+	// Depth limit
+	if depth > maxDepth {
+		return
+	}
+	
+	// Add current to path
+	currentPath = append(currentPath, current)
+	visited[current] = true
+	
+	// Track required nodes
+	wasRequired := false
+	if requiredSet[current] && !requiredVisited[current] {
+		requiredVisited[current] = true
+		wasRequired = true
+	}
+	
+	// Check if we reached the end
+	if current == end {
+		if len(requiredVisited) == len(required) {
+			pathCopy := make(Path, len(currentPath))
+			copy(pathCopy, currentPath)
+			*allPaths = append(*allPaths, pathCopy)
+		}
+	} else {
+		// Continue exploring neighbors
+		node, exists := g.Nodes[current]
+		if exists {
+			for _, neighbor := range node.Connections {
+				if visited[neighbor] {
+					continue
+				}
+				
+				// PRUNING: Check if this neighbor is a dead end
+				// 1. Can this neighbor reach the end?
+				if !canReachEnd[neighbor] {
+					continue
+				}
+				
+				// 2. Can this neighbor be reached from start? (should always be true, but check anyway)
+				if !canReachFromStart[neighbor] {
+					continue
+				}
+				
+				// 3. Check if we can still visit all remaining required nodes
+				canReachAll := true
+				for _, req := range required {
+					if !requiredVisited[req] && req != neighbor {
+						// Can neighbor reach this required node?
+						if reachable, exists := canReachFromNode[neighbor]; !exists || !reachable[req] {
+							canReachAll = false
+							break
+						}
+					}
+				}
+				if !canReachAll {
+					continue
+				}
+				
+				g.dfsWithPruning(neighbor, end, requiredSet, required, visited, currentPath, 
+					requiredVisited, allPaths, canReachEnd, canReachFromStart, canReachFromNode, depth+1, maxDepth)
+			}
+		}
+	}
+	
+	// Backtrack
+	visited[current] = false
+	if wasRequired {
+		requiredVisited[current] = false
+	}
 }
 
 // encodeRequired creates a string key from required nodes visited
