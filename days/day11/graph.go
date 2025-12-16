@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -335,15 +336,91 @@ func (g *Graph) CountPathsWithRequiredNodes(start, end string, required []string
 		canReachFromRequired[req] = g.computeReachability(req, true) // Who can reach this required node
 	}
 	
-	visited := make(map[string]bool)
-	requiredVisited := make(map[string]bool)
-	count := 0
 	maxDepth := 50
 	
-	g.dfsCountWithPruning(start, end, requiredSet, required, visited, requiredVisited, 
-		&count, canReachEnd, canReachFromStart, canReachFromRequired, 0, maxDepth)
+	// PARALLEL APPROACH: Start a goroutine for each first-level neighbor
+	startNode, exists := g.Nodes[start]
+	if !exists {
+		return 0
+	}
 	
-	return count
+	// Mark start as visited and track required
+	visited := make(map[string]bool)
+	visited[start] = true
+	requiredVisited := make(map[string]bool)
+	if requiredSet[start] {
+		requiredVisited[start] = true
+	}
+	
+	// If start is the end, check immediately
+	if start == end {
+		if len(requiredVisited) == len(required) {
+			return 1
+		}
+		return 0
+	}
+	
+	// Channel to collect counts from parallel workers
+	resultChan := make(chan int, len(startNode.Connections))
+	validNeighbors := 0
+	
+	// Launch goroutine for each valid neighbor from start
+	for _, neighbor := range startNode.Connections {
+		if visited[neighbor] {
+			continue
+		}
+		
+		// Apply pruning checks
+		if !canReachEnd[neighbor] || !canReachFromStart[neighbor] {
+			continue
+		}
+		
+		canReachAll := true
+		for _, req := range required {
+			if !requiredVisited[req] && req != neighbor {
+				if reachMap, exists := canReachFromRequired[req]; exists {
+					if !reachMap[neighbor] {
+						canReachAll = false
+						break
+					}
+				}
+			}
+		}
+		if !canReachAll {
+			continue
+		}
+		
+		validNeighbors++
+		
+		// Create copies of state for this goroutine
+		visitedCopy := make(map[string]bool)
+		for k, v := range visited {
+			visitedCopy[k] = v
+		}
+		requiredCopy := make(map[string]bool)
+		for k, v := range requiredVisited {
+			requiredCopy[k] = v
+		}
+		
+		// Launch parallel search
+		go func(node string, v map[string]bool, r map[string]bool) {
+			count := 0
+			g.dfsCountWithPruning(node, end, requiredSet, required, v, r, 
+				&count, canReachEnd, canReachFromStart, canReachFromRequired, 1, maxDepth)
+			resultChan <- count
+		}(neighbor, visitedCopy, requiredCopy)
+	}
+	
+	// Collect results from all goroutines with progress reporting
+	totalCount := 0
+	for i := 0; i < validNeighbors; i++ {
+		count := <-resultChan
+		totalCount += count
+		fmt.Fprintf(os.Stderr, "Worker %d/%d completed, found %d paths (total so far: %d)\n", 
+			i+1, validNeighbors, count, totalCount)
+	}
+	
+	return totalCount
 }
 
 // dfsCountWithPruning performs DFS with pruning and only counts paths

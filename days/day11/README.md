@@ -148,7 +148,8 @@ The algorithm uses **DFS (Depth-First Search)** with aggressive pruning and memo
 
 - **Slice reuse**: Reuses path slices by truncating instead of allocating new slices for each recursion
 - **Pre-allocation**: Pre-allocates larger initial capacity for path storage
-- **Early termination**: Stops exploration once path limit is reached
+- **Parallelism**: Launches parallel goroutines for each branch from the start node to utilize multiple CPU cores
+- **Progress reporting**: Shows completion status for each parallel worker (printed to stderr)
 
 ### Performance
 
@@ -172,7 +173,7 @@ The critical optimization was computing reachability maps ONLY for the required 
 - Use `--count-only` flag to only count paths without storing them (for large result sets)
 - Omit flag to see all individual paths (memory scales with path count)
 
-The algorithm provides 100% accuracy and completeness - finding ALL valid paths within the depth limit (50 steps). 
+The algorithm provides 100% accuracy and completeness - finding ALL valid paths within the depth limit (50 steps).
 
 **Note**: For the specific puzzle input with 589 nodes, the number of valid paths appears to be in the billions or trillions, making complete enumeration impractical (hours to days of computation time). The memory remains constant at ~1.1MB throughout. This is an inherent limitation of the "find all paths" problem on very dense graphs, which is #P-complete.
 
@@ -187,7 +188,7 @@ The algorithm provides 100% accuracy and completeness - finding ALL valid paths 
 7. That was a lot better, but it's still not finishing the puzzle input in a reasonable time. I'm going to ask it to do more aggressive pruning based on reachability, and fix how much memory it is using (>60GB in under 2 minutes).
 8. This performance was amazing, but the output took forever to print (teed to a 161M file), so I'm going to ask it to add a parameter to skip printing the paths and just print the count of the paths. It also added a hard limit of 1,000,000 paths to avoid memory issues, that has to be removed for the real puzzle input.
 9. This seemed better, but the memory ballooned to almost 70GB again, I killed it after 20m to try again. I'm going to ask it to optimize memory usage and other optimizations.
-10. This saw little change. I'm going to try again.
+10. This saw little change. I'm going to try again and ask for parallelization and concurrency to speed it up. It's memory footprint is now less than 10MB. That ran for almost 2 days (I forgot it was running) before I killed it. I'm going to ask it to add progress reporting so I can see it's still working.
 
 TODO: add more details after I finish the puzzle.
 
