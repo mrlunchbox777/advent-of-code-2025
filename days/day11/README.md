@@ -189,11 +189,12 @@ The algorithm provides 100% accuracy and completeness - finding ALL valid paths 
 8. This performance was amazing, but the output took forever to print (teed to a 161M file), so I'm going to ask it to add a parameter to skip printing the paths and just print the count of the paths. It also added a hard limit of 1,000,000 paths to avoid memory issues, that has to be removed for the real puzzle input.
 9. This seemed better, but the memory ballooned to almost 70GB again, I killed it after 20m to try again. I'm going to ask it to optimize memory usage and other optimizations.
 10. This saw little change. I'm going to try again and ask for parallelization and concurrency to speed it up. It's memory footprint is now less than 10MB. That ran for almost 2 days (I forgot it was running) before I killed it. I'm going to ask it to add progress reporting so I can see it's still working.
+11. I read through some [reddit comments](https://www.reddit.com/r/adventofcode/comments/1pk855t/2025_day_11_part_2_how_knowledge_from_the_past/) and asked it to implement DFS with memorization. It immediately was able to find the answer, with a few self-contained iterations to fix bugs. It took .011 seconds to run. It got the right answer here.
 
-TODO: add more details after I finish the puzzle.
+Today I was a bit disappointed with the AI's performance, it took a lot of iterations and prompting to get to a good solution. However, the solution it finally came up with is very good.
 
 - I did not give the AI the exact instructions from Advent of Code, but rather paraphrased them with my understanding of the problem.
-- I did not ask the AI to optimize for performance or efficiency.
+- ~~I did not ask the AI to optimize for performance or efficiency.~~
 - I did not provide any starter code or templates; the AI generated the entire solution from scratch.
 - I did not intervene in the coding process except to provide prompts and clarifications as needed.
 - I only updated this section of the README for this day.
