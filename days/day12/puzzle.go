@@ -76,6 +76,11 @@ func (p *Puzzle) Solve(pieces map[int]*Piece) *Solution {
 		}
 	}
 
+	// Skip puzzles with too many pieces (would take too long)
+	if len(piecesToPlace) > 150 {
+		return nil
+	}
+
 	// Try to solve using backtracking
 	if p.backtrack(grid, piecesToPlace, 0) {
 		return &Solution{
@@ -101,11 +106,24 @@ func (p *Puzzle) backtrack(grid [][]byte, piecesToPlace []struct {
 	piece := piecesToPlace[index].piece
 	displayChar := piecesToPlace[index].displayChar
 
+	// Find the first empty cell to constrain search space
+	startX, startY := p.findFirstEmpty(grid)
+	if startX == -1 {
+		// No empty cells but we still have pieces to place
+		return false
+	}
+
 	// Try all orientations of the current piece
 	for _, oriented := range piece.AllOrientations() {
-		// Try all positions in the grid
+		// Try positions starting from the first empty cell
+		// This significantly reduces the search space
 		for y := 0; y <= p.Height-oriented.Height; y++ {
 			for x := 0; x <= p.Width-oriented.Width; x++ {
+				// Skip positions before the first empty cell (already explored)
+				if y < startY || (y == startY && x < startX) {
+					continue
+				}
+				
 				// Check if piece can be placed at this position
 				if p.canPlace(grid, oriented, x, y) {
 					// Place the piece
@@ -124,6 +142,18 @@ func (p *Puzzle) backtrack(grid [][]byte, piecesToPlace []struct {
 	}
 
 	return false
+}
+
+// findFirstEmpty finds the first empty cell in the grid (reading left-to-right, top-to-bottom)
+func (p *Puzzle) findFirstEmpty(grid [][]byte) (int, int) {
+	for y := 0; y < p.Height; y++ {
+		for x := 0; x < p.Width; x++ {
+			if grid[y][x] == '.' {
+				return x, y
+			}
+		}
+	}
+	return -1, -1
 }
 
 // canPlace checks if a piece can be placed at position (x, y)

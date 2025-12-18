@@ -16,7 +16,7 @@ func TestParseInput(t *testing.T) {
 ##.
 .##
 
-4x4: 0 0 0 0 2 0`
+4x4: 0 0 1`
 
 	lines := strings.Split(input, "\n")
 	data, err := ParseInput(lines)
@@ -35,6 +35,11 @@ func TestParseInput(t *testing.T) {
 	puzzle := data.Puzzles[0]
 	if puzzle.Width != 4 || puzzle.Height != 4 {
 		t.Errorf("Expected 4x4 puzzle, got %dx%d", puzzle.Width, puzzle.Height)
+	}
+	
+	// Should have 3 specs (piece 0: 0, piece 1: 0, piece 2: 1)
+	if len(puzzle.PieceSpecs) != 3 {
+		t.Errorf("Expected 3 piece specs, got %d", len(puzzle.PieceSpecs))
 	}
 }
 
@@ -76,21 +81,10 @@ func TestPieceFlip(t *testing.T) {
 
 func TestPuzzleSolve(t *testing.T) {
 	input := `0:
-###
-##.
-##.
+##
+##
 
-1:
-###
-##.
-.##
-
-2:
-.##
-###
-##.
-
-4x4: 0 0 0 0 2 0`
+2x2: 1`
 
 	lines := strings.Split(input, "\n")
 	data, err := ParseInput(lines)

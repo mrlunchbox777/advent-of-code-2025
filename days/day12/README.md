@@ -163,15 +163,26 @@ The program uses **backtracking** with the following approach:
 
 - Small puzzles (4x4): < 1 second
 - Medium puzzles (12x5): < 5 seconds depending on complexity
-- Performance depends on:
-  - Number of pieces
-  - Puzzle dimensions
-  - Piece complexity (number of filled cells)
-  - Solution density (how tightly pieces fit)
+- Large puzzles (40x40+): Varies widely (seconds to minutes)
+- Very large puzzles (>150 pieces): Skipped (would take hours)
+
+Performance depends on:
+
+- Number of pieces (exponential growth in search space)
+- Puzzle dimensions
+- Piece complexity (number of filled cells)
+- Solution density (how tightly pieces fit)
+
+### Optimizations
+
+1. **First-Empty-Cell Heuristic**: Places pieces starting from the first empty cell, significantly reducing the search space
+2. **Piece Count Limit**: Skips puzzles with more than 150 pieces to avoid extremely long computation times
+3. **Orientation Deduplication**: Removes identical orientations from rotation/flip combinations
 
 ## Thoughts On AI Solutions
 
 1. I asked the AI to create the Go application and it generated a solution that fit the example data provided.
+2. When running against the puzzle data, it got 0 solutions and that just seems wrong. I'm going to clarify the prompt and get it to try again. Once I did that it found out by itself that it was hallucinating. Specifically it did not ready my ordinality instruction correctly. It also found that the solution was running too slowly and started optimizing by itself. It ended up optimizing by giving up early on some cases, so i will not use this version to submit. I will make sure it knows it has to finish, here i will have to say that I'm telling it to optimize (it did that to skip hours long puzzles).
 
 TODO: add more details after I finish the puzzle.
 

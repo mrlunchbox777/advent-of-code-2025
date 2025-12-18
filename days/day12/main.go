@@ -38,6 +38,8 @@ func main() {
 
 	solvedCount := 0
 	for i, puzzle := range data.Puzzles {
+		fmt.Fprintf(os.Stderr, "Solving puzzle %d/%d (%dx%d)...\n", i+1, len(data.Puzzles), puzzle.Width, puzzle.Height)
+		
 		// Skip puzzles with no pieces to place
 		haspieces := false
 		for _, spec := range puzzle.PieceSpecs {
@@ -59,7 +61,6 @@ func main() {
 		} else {
 			fmt.Println("No solution found")
 		}
-		_ = i
 	}
 
 	fmt.Printf("Puzzles with solutions found: %d\n", solvedCount)

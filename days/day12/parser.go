@@ -108,25 +108,17 @@ func ParsePuzzle(line string) (*Puzzle, error) {
 	}
 
 	// Parse piece specifications
+	// Each number represents the count for piece 0, 1, 2, etc. in order
 	pieceSpecs := []PieceSpec{}
 	numStrs := strings.Fields(strings.TrimSpace(parts[1]))
-	for i := 0; i < len(numStrs); i += 2 {
-		if i+1 >= len(numStrs) {
-			break
-		}
-		
-		pieceID, err := strconv.Atoi(numStrs[i])
+	for i, numStr := range numStrs {
+		count, err := strconv.Atoi(numStr)
 		if err != nil {
-			return nil, fmt.Errorf("invalid piece ID: %s", numStrs[i])
-		}
-		
-		count, err := strconv.Atoi(numStrs[i+1])
-		if err != nil {
-			return nil, fmt.Errorf("invalid count: %s", numStrs[i+1])
+			return nil, fmt.Errorf("invalid count: %s", numStr)
 		}
 		
 		pieceSpecs = append(pieceSpecs, PieceSpec{
-			PieceID: pieceID,
+			PieceID: i, // Piece ID is the position in the list
 			Count:   count,
 		})
 	}
