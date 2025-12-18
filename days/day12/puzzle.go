@@ -44,6 +44,14 @@ type PlacedPiece struct {
 	DisplayChar byte
 }
 
+// PieceToPlace represents a piece ready to be placed
+type PieceToPlace struct {
+	piece        *Piece
+	displayChar  byte
+	orientations []*Piece
+	filledCount  int
+}
+
 // Solve attempts to solve the puzzle
 func (p *Puzzle) Solve(pieces map[int]*Piece) *Solution {
 	// Create empty grid
@@ -56,33 +64,32 @@ func (p *Puzzle) Solve(pieces map[int]*Piece) *Solution {
 	}
 
 	// Build list of pieces to place with their display characters
-	piecesToPlace := []struct {
-		piece       *Piece
-		displayChar byte
-	}{}
-	
+	var piecesToPlace []PieceToPlace
 	displayChar := byte('A')
+	
 	for _, spec := range p.PieceSpecs {
 		piece, exists := pieces[spec.PieceID]
 		if !exists {
 			return nil
 		}
+		
+		// Pre-compute orientations once per unique piece
+		orientations := piece.AllOrientations()
+		filledCount := countFilledCells(piece)
+		
 		for i := 0; i < spec.Count; i++ {
-			piecesToPlace = append(piecesToPlace, struct {
-				piece       *Piece
-				displayChar byte
-			}{piece, displayChar})
+			piecesToPlace = append(piecesToPlace, PieceToPlace{
+				piece:        piece,
+				displayChar:  displayChar,
+				orientations: orientations,
+				filledCount:  filledCount,
+			})
 			displayChar++
 		}
 	}
 
-	// Skip puzzles with too many pieces (would take too long)
-	if len(piecesToPlace) > 150 {
-		return nil
-	}
-
 	// Try to solve using backtracking
-	if p.backtrack(grid, piecesToPlace, 0) {
+	if p.backtrackOptimized(grid, piecesToPlace, 0) {
 		return &Solution{
 			Width:  p.Width,
 			Height: p.Height,
@@ -93,44 +100,52 @@ func (p *Puzzle) Solve(pieces map[int]*Piece) *Solution {
 	return nil
 }
 
-// backtrack recursively tries to place pieces
-func (p *Puzzle) backtrack(grid [][]byte, piecesToPlace []struct {
-	piece       *Piece
-	displayChar byte
-}, index int) bool {
+// countFilledCells counts the number of filled cells in a piece
+func countFilledCells(piece *Piece) int {
+	count := 0
+	for i := 0; i < piece.Height; i++ {
+		for j := 0; j < piece.Width; j++ {
+			if piece.Grid[i][j] {
+				count++
+			}
+		}
+	}
+	return count
+}
+
+// backtrackOptimized recursively tries to place pieces with optimizations
+func (p *Puzzle) backtrackOptimized(grid [][]byte, piecesToPlace []PieceToPlace, index int) bool {
 	// Base case: all pieces placed
 	if index >= len(piecesToPlace) {
 		return true
 	}
 
-	piece := piecesToPlace[index].piece
 	displayChar := piecesToPlace[index].displayChar
 
-	// Find the first empty cell to constrain search space
-	startX, startY := p.findFirstEmpty(grid)
-	if startX == -1 {
-		// No empty cells but we still have pieces to place
+	// Pruning: check if remaining pieces could possibly fit in remaining space
+	emptyCount := p.countEmptyCells(grid)
+	remainingFilledNeeded := 0
+	for i := index; i < len(piecesToPlace); i++ {
+		remainingFilledNeeded += piecesToPlace[i].filledCount
+	}
+	
+	// If we need more filled cells than we have empty cells, it's impossible
+	if remainingFilledNeeded > emptyCount {
 		return false
 	}
 
-	// Try all orientations of the current piece
-	for _, oriented := range piece.AllOrientations() {
-		// Try positions starting from the first empty cell
-		// This significantly reduces the search space
+	// Try all orientations of the current piece (pre-computed)
+	for _, oriented := range piecesToPlace[index].orientations {
+		// Try all valid positions for this orientation
 		for y := 0; y <= p.Height-oriented.Height; y++ {
 			for x := 0; x <= p.Width-oriented.Width; x++ {
-				// Skip positions before the first empty cell (already explored)
-				if y < startY || (y == startY && x < startX) {
-					continue
-				}
-				
 				// Check if piece can be placed at this position
 				if p.canPlace(grid, oriented, x, y) {
 					// Place the piece
 					p.place(grid, oriented, x, y, displayChar)
 					
 					// Recurse to place next piece
-					if p.backtrack(grid, piecesToPlace, index+1) {
+					if p.backtrackOptimized(grid, piecesToPlace, index+1) {
 						return true
 					}
 					
@@ -142,6 +157,44 @@ func (p *Puzzle) backtrack(grid [][]byte, piecesToPlace []struct {
 	}
 
 	return false
+}
+
+// coversCell checks if a piece at position (px, py) would cover cell (cx, cy)
+func (p *Puzzle) coversCell(piece *Piece, px, py, cx, cy int) bool {
+	// Check if the target cell is within the piece's bounding box
+	if cx < px || cx >= px+piece.Width || cy < py || cy >= py+piece.Height {
+		return false
+	}
+	
+	// Check if the piece has a filled cell at that position
+	return piece.Grid[cy-py][cx-px]
+}
+
+// countEmptyCells counts empty cells in the grid
+func (p *Puzzle) countEmptyCells(grid [][]byte) int {
+	count := 0
+	for i := 0; i < p.Height; i++ {
+		for j := 0; j < p.Width; j++ {
+			if grid[i][j] == '.' {
+				count++
+			}
+		}
+	}
+	return count
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 // findFirstEmpty finds the first empty cell in the grid (reading left-to-right, top-to-bottom)

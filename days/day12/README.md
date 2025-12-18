@@ -163,8 +163,8 @@ The program uses **backtracking** with the following approach:
 
 - Small puzzles (4x4): < 1 second
 - Medium puzzles (12x5): < 5 seconds depending on complexity
-- Large puzzles (40x40+): Varies widely (seconds to minutes)
-- Very large puzzles (>150 pieces): Skipped (would take hours)
+- Large puzzles (40x40+): < 10 seconds per puzzle typically
+- 1000 puzzle test suite: ~60 seconds total (427/1000 solvable)
 
 Performance depends on:
 
@@ -175,19 +175,24 @@ Performance depends on:
 
 ### Optimizations
 
-1. **First-Empty-Cell Heuristic**: Places pieces starting from the first empty cell, significantly reducing the search space
-2. **Piece Count Limit**: Skips puzzles with more than 150 pieces to avoid extremely long computation times
-3. **Orientation Deduplication**: Removes identical orientations from rotation/flip combinations
+1. **Pre-computed Orientations**: All piece orientations are calculated once and reused
+2. **Filled Cell Counting**: Pre-compute filled cell counts for pruning
+3. **Early Pruning**: Detect impossible states early (more pieces than space available)
+4. **Orientation Deduplication**: Removes identical orientations from rotation/flip combinations
+
+The algorithm guarantees finding a solution if one exists, or correctly reporting when no solution is possible.
 
 ## Thoughts On AI Solutions
 
 1. I asked the AI to create the Go application and it generated a solution that fit the example data provided.
 2. When running against the puzzle data, it got 0 solutions and that just seems wrong. I'm going to clarify the prompt and get it to try again. Once I did that it found out by itself that it was hallucinating. Specifically it did not ready my ordinality instruction correctly. It also found that the solution was running too slowly and started optimizing by itself. It ended up optimizing by giving up early on some cases, so i will not use this version to submit. I will make sure it knows it has to finish, here i will have to say that I'm telling it to optimize (it did that to skip hours long puzzles).
+3. It said it got a solution that is complete and correct and I will attempt it.
+4. It got it correct.
 
 TODO: add more details after I finish the puzzle.
 
 - I did not give the AI the exact instructions from Advent of Code, but rather paraphrased them with my understanding of the problem.
-- I did not ask the AI to optimize for performance or efficiency.
+- ~~I did not ask the AI to optimize for performance or efficiency.~~
 - I did not provide any starter code or templates; the AI generated the entire solution from scratch.
 - I did not intervene in the coding process except to provide prompts and clarifications as needed.
 - I only updated this section of the README for this day.
